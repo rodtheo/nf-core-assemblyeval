@@ -19,6 +19,7 @@ include { nfCoreLogo                } from '../../nf-core/utils_nfcore_pipeline'
 include { imNotification            } from '../../nf-core/utils_nfcore_pipeline'
 include { UTILS_NFCORE_PIPELINE     } from '../../nf-core/utils_nfcore_pipeline'
 include { workflowCitation          } from '../../nf-core/utils_nfcore_pipeline'
+include { PREPARE_INPUT } from '../prepare_input'
 
 /*
 ========================================================================================
@@ -77,31 +78,41 @@ workflow PIPELINE_INITIALISATION {
     //
     validateInputParameters()
 
+    // input.view()
+
+    // PREPARE_INPUT( input )
+
+    // input.branch { file ->
+    //         csv_ch: file.name.endsWith(".csv")
+    //         tsv_ch: file.name.endsWith(".tsv")
+    //         yml_ch: file.name.endsWith(".yml") || file.name.endsWith(".yaml")
+    //     }.set { input }
+
     //
     // Create channel from input file provided through params.input
     //
-    Channel
-        .fromSamplesheet("input")
-        .map {
-            meta, fastq_1, fastq_2 ->
-                if (!fastq_2) {
-                    return [ meta.id, meta + [ single_end:true ], [ fastq_1 ] ]
-                } else {
-                    return [ meta.id, meta + [ single_end:false ], [ fastq_1, fastq_2 ] ]
-                }
-        }
-        .groupTuple()
-        .map {
-            validateInputSamplesheet(it)
-        }
-        .map {
-            meta, fastqs ->
-                return [ meta, fastqs.flatten() ]
-        }
-        .set { ch_samplesheet }
+    // Channel
+    //     .fromSamplesheet("input")
+    //     .map {
+    //         meta, fastq_1, fastq_2 ->
+    //             if (!fastq_2) {
+    //                 return [ meta.id, meta + [ single_end:true ], [ fastq_1 ] ]
+    //             } else {
+    //                 return [ meta.id, meta + [ single_end:false ], [ fastq_1, fastq_2 ] ]
+    //             }
+    //     }
+    //     .groupTuple()
+    //     .map {
+    //         validateInputSamplesheet(it)
+    //     }
+    //     .map {
+    //         meta, fastqs ->
+    //             return [ meta, fastqs.flatten() ]
+    //     }
+    //     .set { ch_samplesheet }
 
     emit:
-    samplesheet = ch_samplesheet
+    samplesheet = Channel.empty()
     versions    = ch_versions
 }
 
