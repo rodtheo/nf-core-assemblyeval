@@ -78,7 +78,7 @@ workflow PIPELINE_INITIALISATION {
     //
     validateInputParameters()
 
-    // input.view()
+
 
     // PREPARE_INPUT( input )
 

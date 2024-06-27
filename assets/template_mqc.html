@@ -1,0 +1,28 @@
+<!--
+id: 'custom-html'
+section_name: 'Custom HTML'
+description: "This section is created using a custom HTML file"
+-->
+
+<blockquote>MultiQC Custom Content HTML File</blockquote>
+<pre><code>This custom content HTML file has a HTML comment at the top with some MultiQC configuration</code></pre>
+<p>MultiQC uses <a href="https://getbootstrap.com/" target="_blank">Bootstrap</a>, so you can use any of the
+<a href="#" class="btn btn-primary">Bootstrap CSS classes</a> you like in your HTML.</p>
+<img src="../assets/nf-core-assemblyeval_logo_light.png" class="rounded float-left" alt="Responsive image">
+<img src="../assets/nf-core-assemblyeval_logo_light.png" class="rounded float-right" alt="Responsive image">
+{% for asm in asms %}
+<blockquote>MultiQC Custom Content HTML File - {{ asm.id }}</blockquote>
+<p>
+<a class="btn btn-primary" data-toggle="collapse" href="#collapseExample_{{ asm.id }}" role="button" aria-expanded="false" aria-controls="collapseExample">
+    Link with href - {{ asm.id }}
+</a>
+</p>
+<div class="collapse" id="collapseExample_{{ asm.id }}">
+<div class="card card-body">
+    Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. Nihil anim keffiyeh helvetica, craft beer labore wes anderson cred nesciunt sapiente ea proident.
+    <img src={{ asm.img|tojson }} class="rounded float-left" alt="Responsive image" width="200">
+    <img src={{ asm.img|tojson }} class="rounded float-right" alt="Responsive image" width="200">
+
+</div>
+</div>
+{% endfor %}

@@ -38,7 +38,7 @@ workflow COMPLETENESS_ASM {
 	// QUAST ( reference_ch, [[], []], [[], []] )
 
 	lineages_ch = reference_ch.map{ meta_asm, asm -> meta_asm['busco_lineages'][0]}.first()
-	lineages_ch.view{ "LINEAGES: $it" }
+	// lineages_ch.view{ "LINEAGES: $it" }
 
 
 	if ( params.busco == true){
@@ -55,10 +55,7 @@ workflow COMPLETENESS_ASM {
 		results_dir_ch.mix (COMPLEASM.out.busco_dir ).set{ results_dir_ch }
 		results_summary_ch.mix (COMPLEASM.out.short_summaries_txt).set{ results_summary_ch }
 		
-	}	
-
-
-
+	}
 
 
     // if( params.aligner == 'bowtie' ){
@@ -86,5 +83,5 @@ workflow COMPLETENESS_ASM {
 	busco = results_dir_ch
 	// busco_short_summaries_txt = BUSCO.out.short_summaries_txt
 	busco_short_summaries_txt = results_summary_ch
-	// versions = QUAST.out.versions
+	versions = BUSCO_BUSCO.out.versions
 }

@@ -41,10 +41,10 @@ ch_multiqc_custom_methods_description = params.multiqc_methods_description ? fil
 // include { INPUT_CHECK } from '../subworkflows/local/input_check'
 include { PREPARE_INPUT } from '../subworkflows/local/prepare_input'
 include { READ_MAPPING } from '../subworkflows/local/read_mapping'
-// include { CONTIGUITY_ASM } from '../subworkflows/local/contiguity'
+include { CONTIGUITY_ASM } from '../subworkflows/local/contiguity'
 include { COMPLETENESS_ASM } from '../subworkflows/local/completeness'
-// include { CORRECTNESS_ASM } from '../subworkflows/local/correctness'
-// include { KMER_PROFILE } from '../subworkflows/local/kmerprofile'
+include { CORRECTNESS_ASM } from '../subworkflows/local/correctness'
+include { KMER_PROFILE } from '../subworkflows/local/kmerprofile'
 // include { CONTAMINATION_ASM } from '../subworkflows/local/contamination'
 
 /*
@@ -59,7 +59,8 @@ include { COMPLETENESS_ASM } from '../subworkflows/local/completeness'
 include { FASTQC                      } from '../modules/nf-core/fastqc/main'
 include { MULTIQC                     } from '../modules/nf-core/multiqc/main'
 // include { CUSTOM_DUMPSOFTWAREVERSIONS } from '../modules/nf-core/custom/dumpsoftwareversions/main'
-// include { PARSE_RESULTS } from '../modules/local/parse_results'
+include { PARSE_RESULTS } from '../modules/local/parse_results'
+include { JINJA_MULTIQC } from '../modules/local/jinja_multiqc'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -68,11 +69,12 @@ include { MULTIQC                     } from '../modules/nf-core/multiqc/main'
 */
 
 // Info required for completion email and summary
-def multiqc_report = []
+// def multiqc_report = []
 
 workflow ASSEMBLYEVAL {
 
     ch_versions = Channel.empty()
+    ch_multiqc_files = Channel.empty()
 
     //
     // SUBWORKFLOW: Read in samplesheet, validate and stage input files
@@ -87,7 +89,10 @@ workflow ASSEMBLYEVAL {
     // ! There is currently no tooling to help you write a sample sheet schema
 
     illumina_ch = PREPARE_INPUT.out.illumina
-    // illumina_ch.view()
+    
+    // illumina_ch.view{"READS CHANNEL: " + it}
+
+    // PREPARE_INPUT.out.assemblies.view{"\n\nASSEMBLIES CHANNEL: " + it}
 
     //
     // MODULE: Run FastQC
@@ -95,6 +100,7 @@ workflow ASSEMBLYEVAL {
     FASTQC (
         illumina_ch
     )
+    ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]})
     ch_versions = ch_versions.mix(FASTQC.out.versions.first())
      
 
@@ -111,48 +117,49 @@ workflow ASSEMBLYEVAL {
     )
 
     // MODULE: Contiguity Metrics
-    //
-    // CONTIGUITY_ASM (
-    //     PREPARE_INPUT.out.assemblies
-    // )
+    
+    CONTIGUITY_ASM (
+        PREPARE_INPUT.out.assemblies
+    )
 
     // //
     // // MODULE: Correctness Metrics
     // //
     // // SUB-MODULE: Mapping reads
     // //
-    // READ_MAPPING (
-    //     illumina_ch, PREPARE_INPUT.out.assemblies
-    // )
+    READ_MAPPING (
+        illumina_ch, PREPARE_INPUT.out.assemblies
+    )
 
     // // READ_MAPPING.out.bam.view{ "*** ETAPA 2 - BAM: $it"}
     // // READ_MAPPING.out.bai.view{ "*** ETAPA 2 - BAI: $it"}
 
     
-    // CORRECTNESS_ASM (
-    //     READ_MAPPING.out.asm, READ_MAPPING.out.bam, READ_MAPPING.out.bai
-    // )
+    CORRECTNESS_ASM (
+       READ_MAPPING.out.joined_asm_bam, READ_MAPPING.out.asm, READ_MAPPING.out.bam, READ_MAPPING.out.bai
+    )
 
-    // KMER_PROFILE (
-    //     illumina_ch, PREPARE_INPUT.out.assemblies
-    // )
+    KMER_PROFILE (
+        illumina_ch, PREPARE_INPUT.out.assemblies
+    )
 
-    // // PREPARE_INPUT.out.assemblies.view{ "ASSEMBLIES: $it" }
+    // PREPARE_INPUT.out.assemblies.view{ "ASSEMBLIES TO KMER PROFILE: $it" }
     // // parse_results_to_table(args.genomes_ids, args.ale_res, args.reapr_res, args.busco_re_summary, args.quast_res, args.file_out)
     
-    // out_asm_ch = CORRECTNESS_ASM.out.reapr.map{ meta, reapr -> meta['id'] }.collect( sort: true ).view{ "ASSEMBLIES: $it" }
-    // out_ale_ch = CORRECTNESS_ASM.out.ale.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
-    // out_reapr_ch = CORRECTNESS_ASM.out.reapr.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
-    // out_busco_re_summary_ch = COMPLETENESS_ASM.out.busco_short_summaries_txt.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
-    // out_quast_ch = CONTIGUITY_ASM.out.quast_tsv.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
-    // out_merfin_qv_ch = KMER_PROFILE.out.merfin_logs.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
-    // out_merfin_completeness_ch = KMER_PROFILE.out.merfin_completeness.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
+    out_asm_ch = CORRECTNESS_ASM.out.reapr.map{ meta, reapr -> meta['id'] }.collect( sort: true ).view{ "ASSEMBLIES: $it" }
+    out_ale_ch = CORRECTNESS_ASM.out.ale.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
+    out_reapr_ch = CORRECTNESS_ASM.out.reapr.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
+    out_busco_re_summary_ch = COMPLETENESS_ASM.out.busco_short_summaries_txt.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
+    out_quast_ch = CONTIGUITY_ASM.out.quast_tsv.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
+    out_merfin_qv_ch = KMER_PROFILE.out.merfin_logs.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
+    out_merfin_completeness_ch = KMER_PROFILE.out.merfin_completeness.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
 
     // // out_table_ch = Channel.fromPath("out_table.csv")
     
     // COMPLETENESS_ASM.out.busco_short_summaries_txt.view{ "REAPR: $it" }
     
-    // PARSE_RESULTS ( out_asm_ch, out_ale_ch, out_reapr_ch, out_busco_re_summary_ch, out_quast_ch, out_merfin_qv_ch, out_merfin_completeness_ch  )
+    PARSE_RESULTS ( out_asm_ch, out_ale_ch, out_reapr_ch, out_busco_re_summary_ch, out_quast_ch, out_merfin_qv_ch, out_merfin_completeness_ch  )
+    // PARSE_RESULTS.out.res.view{ "\n\nRESULTS ARE IN: $it"}
 
     // // // CORRECTNESS_ASM.out.reapr.collect( {it[1]}, sort: {it.getName()} ).set{ new_collect }
     
@@ -163,6 +170,68 @@ workflow ASSEMBLYEVAL {
     // CUSTOM_DUMPSOFTWAREVERSIONS (
     //     ch_versions.unique().collectFile(name: 'collated_versions.yml')
     // )
+
+    ch_versions = ch_versions.mix(KMER_PROFILE.out.versions).mix(CORRECTNESS_ASM.out.versions).mix(READ_MAPPING.out.versions).mix(CONTIGUITY_ASM.out.versions).mix(COMPLETENESS_ASM.out.versions)
+
+    //
+    // Collate and save software versions
+    //
+    softwareVersionsToYAML(ch_versions)
+        .collectFile(
+            storeDir: "${params.outdir}/pipeline_info",
+            name: 'nf_core_pipeline_software_mqc_versions.yml',
+            sort: true,
+            newLine: true
+        ).set { ch_collated_versions }
+
+    //
+    // MODULE: MultiQC
+    //
+    ch_multiqc_config        = Channel.fromPath(
+        "$projectDir/assets/multiqc_config.yml", checkIfExists: true)
+    ch_multiqc_custom_config = params.multiqc_config ?
+        Channel.fromPath(params.multiqc_config, checkIfExists: true) :
+        Channel.empty()
+    ch_multiqc_logo          = params.multiqc_logo ?
+        Channel.fromPath(params.multiqc_logo, checkIfExists: true) :
+        Channel.empty()
+
+    ch_multiqc_custom_config = ch_multiqc_custom_config.mix(Channel.fromPath("$projectDir/assets/multiqc_img_config.yaml", checkIfExists: true))
+
+    summary_params      = paramsSummaryMap(
+        workflow, parameters_schema: "nextflow_schema.json")
+    ch_workflow_summary = Channel.value(paramsSummaryMultiqc(summary_params))
+
+    ch_multiqc_custom_methods_description = params.multiqc_methods_description ?
+        file(params.multiqc_methods_description, checkIfExists: true) :
+        file("$projectDir/assets/methods_description_template.yml", checkIfExists: true)
+    ch_methods_description                = Channel.value(
+        methodsDescriptionText(ch_multiqc_custom_methods_description))
+
+    ch_multiqc_files = ch_multiqc_files.mix(
+        ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'))
+    ch_multiqc_files = ch_multiqc_files.mix(ch_collated_versions)
+    ch_multiqc_files = ch_multiqc_files.mix(
+        ch_methods_description.collectFile(
+            name: 'methods_description_mqc.yaml',
+            sort: true
+        )
+    )
+    ch_multiqc_files = ch_multiqc_files.mix(PARSE_RESULTS.out.res.map{ asm_names, table -> table})
+    ch_multiqc_files = ch_multiqc_files.mix(Channel.fromPath("$projectDir/assets/"))
+
+    JINJA_MULTIQC ( Channel.fromPath("$projectDir/assets/template_mqc.html"), Channel.fromPath("$projectDir/assets/nf-core-assemblyeval_logo_light.png") )
+
+    // ch_multiqc_files = ch_multiqc_files.mix(Channel.fromPath("$projectDir/assets/html_with_comment_mqc.html"))
+    ch_multiqc_files = ch_multiqc_files.mix(JINJA_MULTIQC.out.rendered)
+    ch_multiqc_logo = ch_multiqc_logo.mix(Channel.fromPath("$projectDir/assets/nf-core-assemblyeval_logo_light.png"))
+
+    MULTIQC (
+        ch_multiqc_files.collect(),
+        ch_multiqc_config.toList(),
+        ch_multiqc_custom_config.toList(),
+        ch_multiqc_logo.toList()
+    )
 
     // //
     // // MODULE: MultiQC
@@ -195,7 +264,10 @@ workflow ASSEMBLYEVAL {
     //     ch_multiqc_custom_config.toList(),
     //     ch_multiqc_logo.toList()
     // )
-    // multiqc_report = MULTIQC.out.report.toList()
+    multiqc_report = MULTIQC.out.report.toList()
+    emit:
+    multiqc_report // channel: /path/to/multiqc_report.html
+    versions       = ch_versions                 // channel: [ path(versions.yml) ]
 }
 
 /*
@@ -217,19 +289,19 @@ workflow.onComplete {
         """
         .stripIndent()
         
-    sendMail(to: 'theodoro.biotec@gmail.com', from: 'theodoro.biotec@gmail.com', subject: 'My pipeline execution', body: msg)
+    // sendMail(to: 'theodoro.biotec@gmail.com', from: 'theodoro.biotec@gmail.com', subject: 'My pipeline execution', body: msg)
 }
 
-workflow.onComplete {
-    if (params.email || params.email_on_fail) {
-        NfcoreTemplate.email(workflow, params, summary_params, projectDir, log, multiqc_report)
-    }
-    NfcoreTemplate.dump_parameters(workflow, params)
-    NfcoreTemplate.summary(workflow, params, log)
-    if (params.hook_url) {
-        NfcoreTemplate.IM_notification(workflow, params, summary_params, projectDir, log)
-    }
-}
+// workflow.onComplete {
+//     if (params.email || params.email_on_fail) {
+//         NfcoreTemplate.email(workflow, params, summary_params, projectDir, log, multiqc_report)
+//     }
+//     NfcoreTemplate.dump_parameters(workflow, params)
+//     NfcoreTemplate.summary(workflow, params, log)
+//     if (params.hook_url) {
+//         NfcoreTemplate.IM_notification(workflow, params, summary_params, projectDir, log)
+//     }
+// }
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

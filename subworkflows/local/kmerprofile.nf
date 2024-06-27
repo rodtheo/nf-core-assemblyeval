@@ -5,9 +5,9 @@ include { MERYL_GREATER_THAN } from '../../modules/local/meryl_greater'
 include { MERYL_HISTOGRAM as MERYL_HISTOGRAM_READS_PRE;
           MERYL_HISTOGRAM as MERYL_HISTOGRAM_GENOME_PRE } from '../../modules/nf-core/meryl/histogram/main'
 include { GENOMESCOPE2 as GENOMESCOPE2_PRE } from '../../modules/nf-core/genomescope2/main'
-include { MERFIN_COMPLETENESS } from '../../modules/local/merfin_completeness'
+include { MERFIN_COMPLETENESS } from '../../modules/local/merfin/completeness/main'
 include { MERFIN_HIST as MERFIN_HIST_EVALUATE_POLISH;
-          MERFIN_HIST as MERFIN_HIST_EVALUATE_PRIMARY_ASSEMBLY } from '../../modules/local/merfin_hist'
+          MERFIN_HIST as MERFIN_HIST_EVALUATE_PRIMARY_ASSEMBLY } from '../../modules/nf-core/merfin/hist/main'
 
 process GET_PEAK {
     input:
@@ -45,7 +45,9 @@ workflow KMER_PROFILE {
 
 	Channel.empty()
         .set { res_logs_ch }
-		
+	
+    Channel.empty()
+        .set { res_versions_ch }
     
 	// (1) Generate k-mers count distribution
 
@@ -59,14 +61,19 @@ workflow KMER_PROFILE {
 		meta_new.put('single_end', true);
 		[meta_new, reads] }
 	}
-	reads_ch_single.view{ "++++++++++++ READS: $it" }
+	// reads_ch_single.view{ "++++++++++++ READS: $it" }
             
     CAT_FASTQ (
         reads_ch_single
     )
 	
+    CAT_FASTQ.out.reads.multiMap{ meta, reads -> 
+        outs: [meta, reads]
+        kmer: meta['kmer_size']
+    }.set{ meryl_ch }
+
 	MERYL_COUNT_READS_01 (
-        CAT_FASTQ.out.reads
+        meryl_ch.outs, meryl_ch.kmer
     )
 
 	// (1.2) Rename output as meryldb - SKIPPED BECAUSE WE JOIN THE READS?
@@ -82,7 +89,7 @@ workflow KMER_PROFILE {
 	MERYL_HISTOGRAM_READS_PRE (
         // MERYL_COUNT_READS_01.out.meryl_db.mix(MERYL_COUNT_GENOME_01.out.meryl_db)
         // MERYL_GREATER_THAN.out.meryl_db
-		MERYL_COUNT_READS_01.out.meryl_db
+		MERYL_COUNT_READS_01.out.meryl_db, meryl_ch.kmer
     )
 
 	// (1.7) Genome profiling with GenomeScope2
@@ -100,31 +107,67 @@ workflow KMER_PROFILE {
 	reference.map{ meta, assemblies -> {
 		def meta_new = meta.clone();
 		meta_new.put("id", meta.get("id")+"_"+meta.get("build"));
-		[ meta_new, assemblies['pri_asm'] ]
+		[ ['id_to_join': meta.get("id")], meta_new, assemblies['pri_asm'] ]
 	 } }.set{ reference_ch }
 
+    // reference_ch.view{"ASSEMBLIES MEFIN: $it"}
+
 	MERYL_COUNT_GENOME_01 (
-        reference_ch
+        reference_ch.map{ meta_join, meta, assembly -> [ meta, assembly] }, meryl_ch.kmer
     )
 
-	// // (1.8) K-mer based evaluation with Merfin (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9745813/)
+    MERYL_GREATER_THAN.out.meryl_db.combine(GENOMESCOPE2_PRE.out.lookup_table).combine(peak_ch_val).set{ to_merfin_ch }
+    
+    to_merfin_ch.map{ meta_reads_db, meryl_db, meta_lt, lt, peak -> 
+    [ ['id_to_join': meta_reads_db.get("id")], meta_reads_db, meryl_db, meta_lt, lt, peak] }.set{ to_merfin_ch }
+
+    // to_merfin_ch.view{ "TO MERFIN: $it" }
+
+    reference_ch.combine(to_merfin_ch, by: [0]).map{ meta_join, meta, asm, meta_reads_db, meryl_db, meta_lt, lt, peak -> 
+        [[meta, asm],[meta_reads_db, meryl_db],lt,[],peak]  }.set{ to_test_merfin_ch }
+
+    reference_ch.combine(to_merfin_ch, by: [0]).multiMap{ meta_join, meta, asm, meta_reads_db, meryl_db, meta_lt, lt, peak -> 
+        assembly: [meta, asm]
+        readmers: [meta_reads_db, meryl_db]
+        lookup_table: lt
+        seqmers: []
+        peak: peak  }.set{ to_merfin_ch }
+
+
+    to_test_merfin_ch.view{ "&&&&&&&&&&&&&&&& TO MERFIN ASM: $it" }
+    // to_merfin_ch.map{ }.readmers.view{ "&&&&&&&&&&&&&&&& TO MERFIN READMER: $it\n\n" }
+
+
+	// (1.8) K-mer based evaluation with Merfin (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9745813/)
+    // MERYL_COUNT_GENOME_01.out.meryl_db,
 	MERFIN_COMPLETENESS (
-        MERYL_COUNT_GENOME_01.out.meryl_db,
-        MERYL_GREATER_THAN.out.meryl_db.first(),
-        GENOMESCOPE2_PRE.out.lookup_table.first(),
-        peak_ch_val
+        to_merfin_ch.assembly,
+        to_merfin_ch.readmers,
+        to_merfin_ch.lookup_table,
+        to_merfin_ch.seqmers,
+        to_merfin_ch.peak
     )
 
-	res_completeness_ch.mix(MERFIN_COMPLETENESS.out.completeness).set{ res_completeness_ch }	
+    // MERFIN_COMPLETENESS.out.completeness.view{ "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& MERFIN - COMPLETENESS: $it" }
+
+	// res_completeness_ch.mix(MERFIN_COMPLETENESS.out.completeness).set{ res_completeness_ch }	
+    res_completeness_ch = MERFIN_COMPLETENESS.out.completeness
+    // res_completeness_ch.view{ "MERFIN - COMPLETENESS: $it" }
+
+    res_versions_ch.mix(MERFIN_COMPLETENESS.out.versions).set{ res_versions_ch }
 
     MERFIN_HIST_EVALUATE_PRIMARY_ASSEMBLY (
-        reference_ch,
-        MERYL_GREATER_THAN.out.meryl_db.first(),
-        GENOMESCOPE2_PRE.out.lookup_table.first(),
-        peak_ch_val
+        to_merfin_ch.assembly,
+        to_merfin_ch.readmers,
+        to_merfin_ch.lookup_table,
+        to_merfin_ch.seqmers,
+        to_merfin_ch.peak
     )
 
-	res_logs_ch.mix( MERFIN_HIST_EVALUATE_PRIMARY_ASSEMBLY.out.log).set{ res_logs_ch }
+    // MERFIN_HIST_EVALUATE_PRIMARY_ASSEMBLY.out.log_stderr.view{ "============================ MERFIN - MERYL DB: $it" }
+
+
+    MERFIN_HIST_EVALUATE_PRIMARY_ASSEMBLY.out.hist.merge(MERFIN_HIST_EVALUATE_PRIMARY_ASSEMBLY.out.log_stderr).set{ out_merfin_hist_log_ch }
 
 
 	
@@ -153,10 +196,10 @@ workflow KMER_PROFILE {
     emit:
 	res = aligned_reads_ch
 	merfin_completeness = res_completeness_ch
-	merfin_logs = res_logs_ch
+	merfin_logs = out_merfin_hist_log_ch.map{ meta, hist, log -> [meta, log] }
     // quast = QUAST.out.results   // queue channel: [ sample_id, file(bam_file) ]
 	// quast_tsv = QUAST.out.tsv
 	// busco = BUSCO.out.busco_dir
 	// busco_short_summaries_txt = BUSCO.out.short_summaries_txt
-	// versions = QUAST.out.versions
+	versions = res_versions_ch
 }

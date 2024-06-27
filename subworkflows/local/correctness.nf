@@ -1,10 +1,11 @@
-include { ALE } from '../../modules/local/ALE'
+include { ALE } from '../../modules/nf-core/ale/main'
 include { REAPR } from '../../modules/local/REAPR'
 include { HEADER_FASTA_REAPR } from '../../modules/local/header_fasta_reapr'
 
 workflow CORRECTNESS_ASM { 
 
     take:
+	joined_ch
 	asm 
     bam        // queue channel: [ sample_id, file(bam_file) ]
     bai    // queue channel: [ sample_id, file(bai_file) ]
@@ -29,14 +30,13 @@ workflow CORRECTNESS_ASM {
 	// }.set{ inputs_reads_asm_ch }
 	// inputs_reads_asm_ch.view{ "ASSEMBLIES+READS COMBINED CHANNEL: $it"}
 
-	left = asm.map{ meta_asm, asm -> [meta_asm['id'], meta_asm, asm] }
-	right = bam.map{ meta_bam, bam -> [meta_bam['id'], meta_bam, bam] }
+	// left = asm.map{ meta_asm, asm -> [meta_asm['id'], meta_asm, asm] }
+	// right = bam.map{ meta_bam, bam -> [meta_bam['id'], meta_bam, bam] }
 
-	joined_ch = left.join(right, failOnMismatch: true).view{ "### JOINED: $it"}
+	// joined_ch = left.join(right, failOnMismatch: true).view{ "### JOINED: $it"}
 
-	joined_ch.multiMap{ meta_id, meta_asm, asm, meta_bam, bam ->
-		asm: [meta_asm, asm]
-		bam: [meta_bam, bam] }.set{ input_ale_ch }
+	joined_ch.multiMap{ meta_id, asm, bam ->
+		asm: [['id': meta_id], asm[1], bam[1]] }.set{ input_ale_ch }
 
 	// SAMTOOLS_SORT( input_samtools_sort_ch.bam,  input_samtools_sort_ch.ref )
 
@@ -51,9 +51,23 @@ workflow CORRECTNESS_ASM {
 	Channel.empty()
         .set { reapr_out_ch }
 
-	HEADER_FASTA_REAPR ( input_ale_ch.asm )
+	joined_ch.multiMap{ meta_id, asm, bam ->
+		asm: asm
+		reapr: bam }.set{ input_reapr_ch }
 
-	REAPR ( HEADER_FASTA_REAPR.out.asm, input_ale_ch.bam )
+
+	HEADER_FASTA_REAPR ( input_reapr_ch.asm )
+
+	HEADER_FASTA_REAPR.out.asm.map{ meta, asm -> [meta['id'], meta, asm]}.set{ left_reapr_ch }
+	input_reapr_ch.reapr.map{ meta, bam -> [meta['id'], meta, bam]}.set{ right_reapr_ch }
+
+	left_reapr_ch.join(right_reapr_ch).map{ meta_id, meta_asm, asm, meta_bam, bam -> [meta_asm, asm, bam]}.set{ reapr_ch_header }
+	// reapr_ch_header.view{ "\n--------------\nREEEEAPR HEADER: $it"}
+
+	// HEADER_FASTA_REAPR.out.asm.join(input_reapr_ch.reapr, by: [0]).set { reapr_ch_header }
+
+	REAPR ( reapr_ch_header )
+	
 	
 	reapr_out_ch.mix( REAPR.out.reapr_summary ).set{ reapr_out_ch }
 
@@ -84,7 +98,5 @@ workflow CORRECTNESS_ASM {
     emit:
     ale = ale_out_ch   // queue channel: [ sample_id, file(bam_file) ]
 	reapr = reapr_out_ch
-	versions = ALE.out.versions
-
-
+	versions = REAPR.out.versions.mix(ALE.out.versions)
 }

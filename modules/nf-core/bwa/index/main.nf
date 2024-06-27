@@ -5,7 +5,7 @@ process BWA_INDEX {
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'https://depot.galaxyproject.org/singularity/bwa:0.7.18--he4a0461_0' :
-        'biocontainers/bwa:0.7.18--he4a0461_0' }"
+        'quay.io/biocontainers/bwa:0.7.18--he4a0461_0' }"
 
     input:
     tuple val(meta), path(fasta)
@@ -21,7 +21,7 @@ process BWA_INDEX {
     def prefix = task.ext.prefix ?: "${fasta.baseName}"
     def args   = task.ext.args ?: ''
     """
-    mkdir bwa
+    mkdir -p bwa
     bwa \\
         index \\
         $args \\

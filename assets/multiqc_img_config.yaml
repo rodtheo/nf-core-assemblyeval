@@ -1,0 +1,43 @@
+custom_data:
+    rnaseq:
+        id: 'custom_v1'
+        section_name: 'Custom test'
+        section_href: 'https://github.com/nf-core/rnaseq'
+        plot_type: 'table'
+        description: 'are collected at run time from the software output.'
+        data:
+            Workflow:
+                Nextflow: 21.04.0
+                nf-core/rnaseq: 3.4dev
+            STAR_ALIGN:
+                star: 2.6.1d
+            TRIMGALORE:
+                trimgalore: 0.6.6 
+            SALMON_TXIMPORT:
+                bioconductor-txmeta: 1.8.0
+            SAMTOOLS_SORT:
+                samtools: 1.12 
+            STRINGTIE:
+                stringtie: 2.1.7
+            SALMON_QUANT:
+                salmon: 1.4.0
+            UCSC_BEDCLIP:
+                ucsc: 377
+            PICARD_MARKDUPLICATES:
+                picard: 2.23.9
+            SALMON_SE_GENE:
+                bioconductor-summarizedexperiment: 1.20.0
+            BEDTOOLS_GENOMECOV:
+                bedtools: 2.30.0
+    some_science:
+        id: 'custom_v2'
+        section_name: "Some real science"
+        description: "This description comes from multiqc_config.yaml and helps to annotate the Custom Content image."
+    my_custom_content_image:
+        id: 'custom_v3'
+        section_name: "My nice image"
+    sp:
+        my_custom_content_image:
+            fn: "nf-core-assemblyeval_logo_light.png"
+ignore_images: false
+
