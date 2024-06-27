@@ -14,7 +14,7 @@ process GET_PEAK {
     tuple val(meta), path(genomescope2model)
 
     output:
-    path("*_peak.txt"), emit: peak
+    tuple val(meta), path("*_peak.txt"), emit: peak
 // cat ${genomescope2model} | grep "^kmercov" | python -c 'import sys; print(float([x.split() for x in sys.stdin.readlines()][0][1]))' > file
 
     // peak="\$(cat ${genomescope2model} | grep "^kmercov" | python -c 'import sys; print(float([x.split() for x in sys.stdin.readlines()][0][1]))')"
@@ -101,7 +101,8 @@ workflow KMER_PROFILE {
         GENOMESCOPE2_PRE.out.model
     )
 
-    peak_ch_val = peak_out.map{ it.text.trim() }.first()
+    peak_ch_val = peak_out.map{ meta, peak -> peak.text.trim() }.first()
+    // peak_ch_val_test = peak_out.map{ it.text.trim() }.first()
 
 	// (1.9) Genome assembly k-mer count
 	reference.map{ meta, assemblies -> {
@@ -116,15 +117,19 @@ workflow KMER_PROFILE {
         reference_ch.map{ meta_join, meta, assembly -> [ meta, assembly] }, meryl_ch.kmer
     )
 
-    MERYL_GREATER_THAN.out.meryl_db.combine(GENOMESCOPE2_PRE.out.lookup_table).combine(peak_ch_val).set{ to_merfin_ch }
+    // MERYL_GREATER_THAN.out.meryl_db.combine(GENOMESCOPE2_PRE.out.lookup_table).combine(peak_ch_val).set{ to_merfin_ch }
+    MERYL_GREATER_THAN.out.meryl_db.combine(GENOMESCOPE2_PRE.out.lookup_table, by: [0]).combine(peak_out, by: [0]).map{ meta, readmer, lt, peak ->
+         [['id_to_join': meta.get("id")], meta, readmer, meta, lt, peak.text.trim()] }.set{ to_merfin_ch }
+
+    // to_merfin_ch_test.view{ "TO MERFIN: $it" }
     
-    to_merfin_ch.map{ meta_reads_db, meryl_db, meta_lt, lt, peak -> 
-    [ ['id_to_join': meta_reads_db.get("id")], meta_reads_db, meryl_db, meta_lt, lt, peak] }.set{ to_merfin_ch }
+    // to_merfin_ch.map{ meta_reads_db, meryl_db, meta_lt, lt, peak -> 
+    // [ ['id_to_join': meta_reads_db.get("id")], meta_reads_db, meryl_db, meta_lt, lt, peak] }.set{ to_merfin_ch }
 
-    // to_merfin_ch.view{ "TO MERFIN: $it" }
+    // reference_ch.combine(to_merfin_ch_test, by: [0]).map{ meta_join, meta, asm, meta_reads_db, meryl_db, meta_lt, lt, peak -> 
+    //     [[meta, asm],[meta_reads_db, meryl_db],lt,[],peak]  }.set{ to_test_merfin_ch }
 
-    reference_ch.combine(to_merfin_ch, by: [0]).map{ meta_join, meta, asm, meta_reads_db, meryl_db, meta_lt, lt, peak -> 
-        [[meta, asm],[meta_reads_db, meryl_db],lt,[],peak]  }.set{ to_test_merfin_ch }
+    // to_test_merfin_ch.view{ "TO MERFIN: $it" }
 
     reference_ch.combine(to_merfin_ch, by: [0]).multiMap{ meta_join, meta, asm, meta_reads_db, meryl_db, meta_lt, lt, peak -> 
         assembly: [meta, asm]
@@ -134,7 +139,7 @@ workflow KMER_PROFILE {
         peak: peak  }.set{ to_merfin_ch }
 
 
-    to_test_merfin_ch.view{ "&&&&&&&&&&&&&&&& TO MERFIN ASM: $it" }
+    // to_test_merfin_ch.view{ "&&&&&&&&&&&&&&&& TO MERFIN ASM: $it" }
     // to_merfin_ch.map{ }.readmers.view{ "&&&&&&&&&&&&&&&& TO MERFIN READMER: $it\n\n" }
 
 
