@@ -1,0 +1,74 @@
+custom_data:
+    contaminant:
+        parent_id: 'contaminant'
+        parent_name: "Assembly Contaminant Screening"
+        plot_type: 'html'
+        data: '<p>Screening assembled genomes for contamination using NCBI FCS. Recent advancements in genome sequencing have sped up the creation of genome assemblies and their submission to public databases, highlighting the need for high-performance screening tools. Contaminants can cause misleading conclusions about the biology of the organism, such as gene content and evolution. Therefore, contamination screening should ideally be performed after the initial contig assembly and before any downstream genome analyses.</p>
+<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#JanelaModalContaminant">
+    Help
+</button>
+
+<div id="JanelaModalContaminant" class="modal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">HELP</h3>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+            </div>
+
+            <div class="modal-body">
+                <p>Action values are as follows:</p>
+                <p>EXCLUDE: Remove the entire sequence.</p>
+                <p>TRIM: Remove the sequence at the beginning or end of the sequence. GenBank generally requires that sequences do not start or end with Ns, so the recommended course of action is to trim off contaminant sequences.</p>
+                <p>FIX: If a contaminant range is found in the middle of a sequence, it should either be hardmasked (converted to Ns) or split into two new sequences if it suggests misassembly.</p>
+                <p>REVIEW: Additional sequences that may be contaminants but with lower signal. In many cases, these should also be treated as contaminant and dropped. The indicated range may be whole or part (i.e. treat as EXCLUDE, FIX, or TRIM).</p>
+                <p>REVIEW_RARE: This category reports prokaryote assemblies contaminated with sequences from other prokaryotes if the total sequence length is under 1% of the genome length. Our analyses indicate that most of this is real contamination, but reporting prokaryote-in-prokaryote contamination is a new feature for GenBank submission and we are therefore phasing in the reporting of such issues. You may adjust the total sequence length threshold by setting an environment variable GX_ACTION_REPORT_PA_SAME_KINGDOM_THRESHOLD=<some number> in the env.txt file explained in the Environment Variables section above.</p>
+                <p>INFO: Chimeras involving sequences that are known to be integrated into host genomes. Currently only Wolbachia integrations into insect genomes are assigned this category. Make a Feature Request Issue if you would like us to consider other cases for this assignment.</p>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>'
+
+    kmer:
+        parent_id: 'kmer'
+        parent_name: "K-mer profiles"
+        plot_type: 'html'
+        data: '<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#JanelaModalKmer">
+    Help
+</button>
+
+<div id="JanelaModalKmer" class="modal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">HELP</h3>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+            </div>
+
+            <div class="modal-body">
+                <blockquote>Assembly quality assessment using the k-mer spectrum</blockquote>
+                <p>The k-mer spectrum of the reads (left) and merqry plot form assembly QC.
+                    The black area represents the k-mers present in the read set but not in the assembly, and the red area represents what is present in the assembly once.
+                    Larger assembly size than the genome size estimate, higher 1n peak in the assembly (red) than absent (black) and relatively high BUSCO duplication scores
+                    all indicate there are uncollapsed haplotypes in the haploid genome assembly which will require downstream haplotype collapsing.
+                </p>
+                <p>Charactarization of sequencing dataset using the distribution of k-mer coverages.
+                    The k-mer spectrum can estimage genomic features such as genome size, heterozygosity or repetitiveness.</p>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>'
+        # parent_description: "Screening assembled genomes for contamination using NCBI FCS. Recent advancements in genome sequencing have sped up the creation of genome assemblies and their submission to public databases, highlighting the need for high-performance screening tools. Contaminants can cause misleading conclusions about the biology of the organism, such as gene content and evolution. Therefore, contamination screening should ideally be performed after the initial contig assembly and before any downstream genome analyses."
+

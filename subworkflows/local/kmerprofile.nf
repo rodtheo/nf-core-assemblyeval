@@ -8,6 +8,8 @@ include { GENOMESCOPE2 as GENOMESCOPE2_PRE } from '../../modules/nf-core/genomes
 include { MERFIN_COMPLETENESS } from '../../modules/local/merfin/completeness/main'
 include { MERFIN_HIST as MERFIN_HIST_EVALUATE_POLISH;
           MERFIN_HIST as MERFIN_HIST_EVALUATE_PRIMARY_ASSEMBLY } from '../../modules/nf-core/merfin/hist/main'
+include { FASTK_FASTK } from '../../modules/nf-core/fastk/fastk/main'
+include { MERQURYFK_MERQURYFK } from '../../modules/nf-core/merquryfk/merquryfk/main'
 
 process GET_PEAK {
     input:
@@ -169,13 +171,31 @@ workflow KMER_PROFILE {
         to_merfin_ch.peak
     )
 
+    res_versions_ch.mix(MERFIN_HIST_EVALUATE_PRIMARY_ASSEMBLY.out.versions).set{ res_versions_ch }
+
     // MERFIN_HIST_EVALUATE_PRIMARY_ASSEMBLY.out.log_stderr.view{ "============================ MERFIN - MERYL DB: $it" }
 
 
     MERFIN_HIST_EVALUATE_PRIMARY_ASSEMBLY.out.hist.merge(MERFIN_HIST_EVALUATE_PRIMARY_ASSEMBLY.out.log_stderr).set{ out_merfin_hist_log_ch }
 
 
-	
+	FASTK_FASTK(meryl_ch.outs)
+
+    res_versions_ch.mix(FASTK_FASTK.out.versions).set{ res_versions_ch }
+
+    FASTK_FASTK.out.hist.join(FASTK_FASTK.out.ktab).map{ meta, hist, ktab -> 
+    [['id_to_join': meta.get("id")], meta, hist, ktab] }.set{ fastk_out_ch }
+
+    reference_ch.combine(fastk_out_ch, by: [0]).map{ meta_join, meta_asm, asm, meta_reads, hist_reads, ktab_reads -> 
+        def meta_new = meta_asm.clone();
+		meta_new.put("to_join", meta_reads.get("id"));
+        [meta_new, hist_reads, ktab_reads, asm, []]
+    }.set{ to_merqury_ch }
+
+
+    MERQURYFK_MERQURYFK(to_merqury_ch)
+
+    res_versions_ch.mix(MERQURYFK_MERQURYFK.out.versions).set{ res_versions_ch }
 
 
 
@@ -202,6 +222,9 @@ workflow KMER_PROFILE {
 	res = aligned_reads_ch
 	merfin_completeness = res_completeness_ch
 	merfin_logs = out_merfin_hist_log_ch.map{ meta, hist, log -> [meta, log] }
+    genomescope2_res = GENOMESCOPE2_PRE.out.linear_plot_png.join(GENOMESCOPE2_PRE.out.fitted_histogram_png)
+    merqury_cn = MERQURYFK_MERQURYFK.out.spectra_cn_fl_png
+    merqury_qv = MERQURYFK_MERQURYFK.out.qv
     // quast = QUAST.out.results   // queue channel: [ sample_id, file(bam_file) ]
 	// quast_tsv = QUAST.out.tsv
 	// busco = BUSCO.out.busco_dir

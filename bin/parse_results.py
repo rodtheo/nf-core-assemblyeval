@@ -2,6 +2,7 @@
 
 import pandas as pd
 import numpy as np
+from sklearn.preprocessing import MinMaxScaler
 import argparse
 import logging
 import sys
@@ -195,6 +196,9 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
                 if Path(reapr_file).exists():
                     with open(reapr_file) as infreapr:
                             for line in infreapr.readlines():
+                                    match_percentage_errors = re.match(r'Error free bases:\s(\d+\.\d+)%', line)
+                                    if match_percentage_errors:
+                                            reapr_percentage_errors = match_percentage_errors.group(1)
                                     match_errors = re.match(r'^(\d+)\serrors.$', line)
                                     if match_errors:
                                             reapr_errors = match_errors.group(1)
@@ -204,6 +208,7 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
                                     match_low_frag_cov = re.match(r'Low fragment coverage within a contig:\s(\d+)', line)
                                     if match_low_frag_cov:
                                             low_frag_errors = match_low_frag_cov.group(1)
+                    dict_sample['reapr_percentage_errors'] = reapr_percentage_errors
                     dict_sample['reapr_total_errors'] = reapr_errors
                     dict_sample['reapr_fcd'] = fcd_errors
                     dict_sample['reapr_low'] = low_frag_errors
@@ -296,10 +301,9 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
               'pctmissing': 'BUSCO missing (%)',
                'ncomplete': 'BUSCO complete', 'nsingle': 'BUSCO single', 'nduplicated': 'BUSCO duplicated',
                 'nfragmented': 'BUSCO fragmented', 'nmissing': 'BUSCO missing','total_busco_searched_genes': 'BUSCO SEARCHED GENES', 'ale_norm':'ALE normalized',
-                'merfin_completeness': 'Merfin Completness','merfin_qv_ast': 'Merfin QV*'}
+                'merfin_completeness': 'Merfin Completness','merfin_qv_ast': 'Merfin QV*', 'reapr_percentage_errors': 'Error-free bases (%)'}
 
             c.rename(columns=dict_names, inplace=True)
-
 
             # c.columns = ['Assembly', 'ALE score (neglog)', 'REAPR erros', 'REAPR fcd', 'REAPR low',
             #  'Assembly length', 'contigs', 'N50', 'Largest contig', 'BUSCO complete (%)', 'BUSCO single (%)', 'BUSCO duplicated (%)', 'BUSCO fragmented (%)', 'BUSCO missing (%)', 'BUSCO complete', 'BUSCO single', 'BUSCO duplicated', 'BUSCO fragmented', 'BUSCO missing', 'ALE normalized']
@@ -310,14 +314,40 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
               'pctmissing': 'COMPLEASM missing (%)',
                'ncomplete': 'COMPLEASM complete', 'nsingle': 'COMPLEASM single', 'nduplicated': 'COMPLEASM duplicated', 'nfragmented': 'COMPLEASM fragmented Class I', 
                'nincomplete': 'COMPLEASM fragmented Class II', 'nmissing': 'COMPLEASM missing','total_busco_searched_genes': 'COMPLEASM SEARCHED GENES',
-                'ale_norm':'ALE normalized', 'merfin_completeness': 'Merfin Completness','merfin_qv_ast': 'Merfin QV*'}
+                'ale_norm':'ALE normalized', 'merfin_completeness': 'Merfin Completness','merfin_qv_ast': 'Merfin QV*', 'reapr_percentage_errors': 'Error-free bases (%)'}
             c.rename(columns=dict_names, inplace=True)
         # c.to_excel("evaluate_assembly/results.xlsx", index=False)
+
         c.to_csv(file_out, index=False, sep="\t")
+
+        data_read = pd.read_csv(file_out, sep="\t", header=0, index_col=False)
+        greater_better = ['Merfin QV*', 'Error-free bases (%)', 'N50', 'BUSCO complete (%)', 'BUSCO single (%)']
+        smaller_better = ['REAPR erros', 'BUSCO duplicated (%)', 'BUSCO fragmented (%)', 'BUSCO missing (%)']
+        complement = data_read[smaller_better].max(axis=0)
+
+        print("SMAAAAAAAAAAAAAAAAALLLLLLLLLERRRRRRRRRRRRRR", data_read[smaller_better])
+        print(complement)
+        scaler_sb = MinMaxScaler()
+        subset_sb = complement.sub(data_read[smaller_better])
+        scaler_sb.fit(subset_sb)
+        scaler_sb_df = scaler_sb.transform(subset_sb)
+        # scaler_sb_df
+
+        scaler = MinMaxScaler()
+        scaler.fit(data_read[greater_better])
+        scaler_df = scaler.transform(data_read[greater_better])
+
+        score = np.mean(np.concatenate((scaler_df, scaler_sb_df), axis=1), axis=1)
+
+        data_read['Score'] = score
+
+        data_read.to_csv(file_out, index=False, sep="\t")
+
         with open(file_out, 'r') as original:
             data = original.read()
         with open(file_out, 'w') as modified:
             modified.write("# id: 'assemblies_table'\n")
+            modified.write("# section_anchor: 'assemblies_table'\n")
             modified.write("# description: 'a custom text introduction (a few sentences) for this section'\n")
             comments_table_columns = """# pconfig:
 #     namespace: 'Cust Data'

@@ -1,0 +1,27 @@
+samples:
+  - metadata:
+      id: Ctrachomatis
+      kmer_size: 21
+      ploidy: 1
+      # Organism domain: either euk or prok
+      organism_domain: prok
+      taxid: "315277" 
+      busco_lineages:
+        # - "fungi_odb10"
+        - "chlamydiae_odb10"
+    assembly:
+      - id: ref
+        # pri_asm: "https://raw.githubusercontent.com/rodtheo/snakemake_pipelines/master/evaluate_assemblies/dataset/assembly.fa"
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/ref/ncbi_dataset/data/GCF_000012125.1/GCF_000012125.1_ASM1212v1_genomic.fasta"
+        # pri_gfa: "https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/genomics/sarscov2/illumina/gfa/assembly.gfa"
+        # alt_asm: "https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/genomics/homo_sapiens/genome/genome2.fasta"
+        # alt_gfa: "https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/genomics/sarscov2/illumina/gfa/assembly.gfa"
+      - id: ctracho_5inversions_default
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/simulated/ctracho_5inversions_default.simseq.genome.fa"
+      - id: ctracho_10persnp_default
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/simulated/ctracho_10persnp_default.simseq.genome.fa"
+      - id: assembly_00
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/great_dataset/assemblies/assembly_00.fasta"
+    illumina:
+      - read1: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/mason_R1_001.fastq.gz"
+        read2: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/mason_R2_001.fastq.gz"

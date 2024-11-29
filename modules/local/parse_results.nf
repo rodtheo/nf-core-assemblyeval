@@ -6,7 +6,7 @@ process PARSE_RESULTS {
     conda "anaconda::pandas=1.5.2"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'https://depot.galaxyproject.org/singularity/pandas:1.5.2' :
-        'quay.io/biocontainers/pandas:1.5.2' }"
+        'docker.io/rodtheo/parse_assembly_eval:1.1.0' }"
 
     // [ ...
     //      [ sample_id, [ ale_res ], [reapr_res], [busco_re_summary], [quast_res]],

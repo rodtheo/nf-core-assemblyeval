@@ -45,7 +45,7 @@ include { CONTIGUITY_ASM } from '../subworkflows/local/contiguity'
 include { COMPLETENESS_ASM } from '../subworkflows/local/completeness'
 include { CORRECTNESS_ASM } from '../subworkflows/local/correctness'
 include { KMER_PROFILE } from '../subworkflows/local/kmerprofile'
-// include { CONTAMINATION_ASM } from '../subworkflows/local/contamination'
+include { CONTAMINATION_ASM } from '../subworkflows/local/contamination'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -61,6 +61,7 @@ include { MULTIQC                     } from '../modules/nf-core/multiqc/main'
 // include { CUSTOM_DUMPSOFTWAREVERSIONS } from '../modules/nf-core/custom/dumpsoftwareversions/main'
 include { PARSE_RESULTS } from '../modules/local/parse_results'
 include { JINJA_MULTIQC } from '../modules/local/jinja_multiqc'
+include { JINJA_CONTAMINANT } from '../modules/local/jinja_contaminant_multiqc'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -75,6 +76,7 @@ workflow ASSEMBLYEVAL {
 
     ch_versions = Channel.empty()
     ch_multiqc_files = Channel.empty()
+    ch_asm = Channel.empty()
 
     //
     // SUBWORKFLOW: Read in samplesheet, validate and stage input files
@@ -103,23 +105,41 @@ workflow ASSEMBLYEVAL {
     ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]})
     ch_versions = ch_versions.mix(FASTQC.out.versions.first())
      
-
+    PREPARE_INPUT.out.assemblies.map{ meta, asm -> [meta, asm]}.view{ "OUT ASSEMBLIES: $it" }
     //
     // MODULE: Contamination
     //
-    // CONTAMINATION_ASM( illumina_ch, PREPARE_INPUT.out.assemblies )
+    CONTAMINATION_ASM( illumina_ch, PREPARE_INPUT.out.assemblies )
+
+    ch_asm = CONTAMINATION_ASM.out.asms.filter{ it != [] }
+
+    ch_asm.view{ "OUT MIXED: $it" }
+
+    Channel.fromPath("$projectDir/assets/template_contaminant_mqc.html").combine(CONTAMINATION_ASM.out.fcs).set{ to_jinja_contaminant_ch }
+
+    JINJA_CONTAMINANT (
+        to_jinja_contaminant_ch.map{ tp, meta, fcs_report -> tp },
+        to_jinja_contaminant_ch.map{ tp, meta, fcs_report -> meta.get("id") },
+        to_jinja_contaminant_ch.map{ tp, meta, fcs_report -> fcs_report }
+    )
+
+
+    JINJA_CONTAMINANT.out.rendered.view{ "================== OUT JINJA CONTAMINANT: $it"}
+
+    ch_multiqc_files = ch_multiqc_files.mix(JINJA_CONTAMINANT.out.rendered)
 
     //
     // MODULE: Completeness Metrics
     //
     COMPLETENESS_ASM (
-        illumina_ch, PREPARE_INPUT.out.assemblies
+        illumina_ch, ch_asm
     )
 
+    // 
     // MODULE: Contiguity Metrics
-    
+    // 
     CONTIGUITY_ASM (
-        PREPARE_INPUT.out.assemblies
+        ch_asm
     )
 
     // //
@@ -128,7 +148,7 @@ workflow ASSEMBLYEVAL {
     // // SUB-MODULE: Mapping reads
     // //
     READ_MAPPING (
-        illumina_ch, PREPARE_INPUT.out.assemblies
+        illumina_ch, ch_asm
     )
 
     // // READ_MAPPING.out.bam.view{ "*** ETAPA 2 - BAM: $it"}
@@ -140,7 +160,7 @@ workflow ASSEMBLYEVAL {
     )
 
     KMER_PROFILE (
-        illumina_ch, PREPARE_INPUT.out.assemblies
+        illumina_ch, ch_asm
     )
 
     // PREPARE_INPUT.out.assemblies.view{ "ASSEMBLIES TO KMER PROFILE: $it" }
@@ -196,7 +216,8 @@ workflow ASSEMBLYEVAL {
         Channel.fromPath(params.multiqc_logo, checkIfExists: true) :
         Channel.empty()
 
-    ch_multiqc_custom_config = ch_multiqc_custom_config.mix(Channel.fromPath("$projectDir/assets/multiqc_img_config.yaml", checkIfExists: true))
+    ch_multiqc_custom_config = ch_multiqc_custom_config.mix(Channel.fromPath("$projectDir/assets/multiqc_kmer_config.yaml", checkIfExists: true))
+    ch_multiqc_custom_config = ch_multiqc_custom_config.mix(Channel.fromPath("$projectDir/assets/multiqc_contaminant_config.yaml", checkIfExists: true))
 
     summary_params      = paramsSummaryMap(
         workflow, parameters_schema: "nextflow_schema.json")
@@ -218,12 +239,31 @@ workflow ASSEMBLYEVAL {
         )
     )
     ch_multiqc_files = ch_multiqc_files.mix(PARSE_RESULTS.out.res.map{ asm_names, table -> table})
-    ch_multiqc_files = ch_multiqc_files.mix(Channel.fromPath("$projectDir/assets/"))
+    // ch_multiqc_files = ch_multiqc_files.mix(Channel.fromPath("$projectDir/assets/"))
 
-    JINJA_MULTIQC ( Channel.fromPath("$projectDir/assets/template_mqc.html"), Channel.fromPath("$projectDir/assets/nf-core-assemblyeval_logo_light.png") )
 
+    KMER_PROFILE.out.merqury_cn.map{ meta, cn_spectra -> [['to_join': meta.get("to_join")], meta, cn_spectra] }.set{ to_jinja_merqury_ch }
+    view{ "MERQURY CN: $it" }
+
+    KMER_PROFILE.out.genomescope2_res.map{ meta, gs_ln, gs_fitted -> [['to_join': meta.get('id')], meta, gs_ln, gs_fitted] }.set{ to_jinja_genscope_ch }
+
+    to_jinja_genscope_ch.combine(to_jinja_merqury_ch, by: [0]).map{ meta_join, meta, gs_ln , gs_fitted, meta_mq, cn_spectra -> [meta_mq, gs_ln, cn_spectra] }.set{ to_jinja_samp_ch }
+
+    Channel.fromPath("$projectDir/assets/template_mqc.html").combine(to_jinja_samp_ch).set{ to_jinja_ch }
+
+    // to_jinja_ch.view{ "TO JINJA: $it" }
+
+    JINJA_MULTIQC ( to_jinja_ch.map{ tp, meta, gs_ln, cn_spectra -> tp },
+    to_jinja_ch.map{ tp, meta, gs_ln, cn_spectra -> meta.get("id") },
+    to_jinja_ch.map{ tp, meta, gs_ln, cn_spectra -> gs_ln },
+    to_jinja_ch.map{ tp, meta, gs_ln, cn_spectra  -> cn_spectra } )
+
+
+    
+     
     // ch_multiqc_files = ch_multiqc_files.mix(Channel.fromPath("$projectDir/assets/html_with_comment_mqc.html"))
     ch_multiqc_files = ch_multiqc_files.mix(JINJA_MULTIQC.out.rendered)
+    
     ch_multiqc_logo = ch_multiqc_logo.mix(Channel.fromPath("$projectDir/assets/nf-core-assemblyeval_logo_light.png"))
 
     MULTIQC (

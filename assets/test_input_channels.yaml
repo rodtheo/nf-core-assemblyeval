@@ -36,5 +36,20 @@ samples:
     illumina:
       - read1: "./data/test1_1_sampled.fastq.gz"
         read2: "./data/test1_2_sampled.fastq.gz"
+  - metadata:
+      id: Contam
+      kmer_size: 21
+      ploidy: 1
+      organism_domain: prok
+      taxid: "4932" 
+      busco_lineages:
+        # - "fungi_odb10"
+        - "bacillales_odb10"
+    assembly:
+      - id: TestContam
+        pri_asm: "./data/FCS_combo_test.fa"
+    illumina:
+      - read1: "./data/out_R1_001.fastq.gz"
+        read2: "./data/out_R2_001.fastq.gz"
 tools:
   # Something here

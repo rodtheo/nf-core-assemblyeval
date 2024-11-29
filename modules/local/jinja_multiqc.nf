@@ -9,11 +9,13 @@ process JINJA_MULTIQC {
 
     input:
     path(template_jinja)
-    path(image_to_encode)
+    val(meta_id)
+    path(image_to_encode_left)
+    path(image_to_encode_right)
 
 
     output:
-    path('jinja_out_mqc.html'), emit: rendered
+    path('*_jinja_out_mqc.html'), emit: rendered
     // path "versions.yml", emit: versions
 
     when:
@@ -25,6 +27,8 @@ process JINJA_MULTIQC {
     """
     jinja_multiqc.py \\
     $template_jinja \\
-    $image_to_encode
+    $meta_id \\
+    $image_to_encode_left \\
+    $image_to_encode_right
     """
 }

@@ -40,9 +40,29 @@
                         "git_sha": "4fc983ad0b30e6e32696fa7d980c76c7bfe1c03e",
                         "installed_by": ["modules"]
                     },
+                    "custom/getchromsizes": {
+                        "branch": "master",
+                        "git_sha": "49f4e50534fe4b64101e62ea41d5dc43b1324358",
+                        "installed_by": ["modules"]
+                    },
+                    "fastk/fastk": {
+                        "branch": "master",
+                        "git_sha": "9b8e3e4bf01529ce548ad32c3cd17a9c03d5f067",
+                        "installed_by": ["modules"]
+                    },
                     "fastqc": {
                         "branch": "master",
                         "git_sha": "285a50500f9e02578d90b3ce6382ea3c30216acd",
+                        "installed_by": ["modules"]
+                    },
+                    "fcs/fcsadaptor": {
+                        "branch": "master",
+                        "git_sha": "f0732b3df35850d3eb16feee0ba1c0192b05bbcb",
+                        "installed_by": ["modules"]
+                    },
+                    "fcs/fcsgx": {
+                        "branch": "master",
+                        "git_sha": "3f5420aa22e00bd030a2556dfdffc9e164ec0ec5",
                         "installed_by": ["modules"]
                     },
                     "genomescope2": {
@@ -50,9 +70,19 @@
                         "git_sha": "c95215baf20e6d8cf2ae0e8411d03c5d9ef21d4a",
                         "installed_by": ["modules"]
                     },
+                    "igvreports": {
+                        "branch": "master",
+                        "git_sha": "666652151335353eef2fcd58880bcef5bc2928e1",
+                        "installed_by": ["modules"]
+                    },
                     "merfin/hist": {
                         "branch": "master",
                         "git_sha": "7ca98cf79d474ac07947b883a9efc7eda45cf843",
+                        "installed_by": ["modules"]
+                    },
+                    "merquryfk/merquryfk": {
+                        "branch": "master",
+                        "git_sha": "3f5420aa22e00bd030a2556dfdffc9e164ec0ec5",
                         "installed_by": ["modules"]
                     },
                     "meryl/count": {
@@ -83,6 +113,16 @@
                     "samtools/sort": {
                         "branch": "master",
                         "git_sha": "04fbbc7c43cebc0b95d5b126f6d9fe4effa33519",
+                        "installed_by": ["modules"]
+                    },
+                    "tabix/bgziptabix": {
+                        "branch": "master",
+                        "git_sha": "f448e846bdadd80fc8be31fbbc78d9f5b5131a45",
+                        "installed_by": ["modules"]
+                    },
+                    "ucsc/wigtobigwig": {
+                        "branch": "master",
+                        "git_sha": "666652151335353eef2fcd58880bcef5bc2928e1",
                         "installed_by": ["modules"]
                     }
                 }

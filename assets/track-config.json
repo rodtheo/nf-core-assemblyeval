@@ -1,0 +1,94 @@
+[{
+  "type": "wig",
+  "name": "ALE-raw-depth",
+  "format": "bedgraph",
+  "url": "{{ page.ale_wig_base }}",
+  "color": "red",
+  "guideLines": [
+    {"color": "green", "dotted": true, "y": 0}
+  ],
+  "graphType": "line",
+  "windowFunction": "mean",
+  "pointSize": 3,
+  "autoscale": true
+},
+{
+  "type": "wig",
+  "name": "ALE-depth",
+  "format": "bedgraph",
+  "url": "{{ page.ale_wig_depth }}",
+  "color": "red",
+  "guideLines": [
+    {"color": "green", "dotted": true, "y": 0}
+  ],
+  "graphType": "line",
+  "windowFunction": "mean",
+  "pointSize": 3,
+  "autoscale": true
+},
+{
+  "type": "wig",
+  "name": "ALE-insert",
+  "format": "bedgraph",
+  "url": "{{ page.ale_wig_insert }}",
+  "color": "red",
+  "guideLines": [
+    {"color": "green", "dotted": true, "y": 0}
+  ],
+  "graphType": "line",
+  "windowFunction": "mean",
+  "pointSize": 3,
+  "autoscale": true
+},
+{
+  "type": "wig",
+  "name": "ALE-kmer",
+  "format": "bedgraph",
+  "url": "{{ page.ale_wig_kmer }}",
+  "color": "red",
+  "guideLines": [
+    {"color": "green", "dotted": true, "y": 0}
+  ],
+  "graphType": "line",
+  "windowFunction": "mean",
+  "pointSize": 3,
+  "autoscale": true
+},
+{
+  "type": "wig",
+  "name": "ALE-place",
+  "format": "bedgraph",
+  "url": "{{ page.ale_wig_place }}",
+  "color": "red",
+  "guideLines": [
+    {"color": "green", "dotted": true, "y": 0}
+  ],
+  "graphType": "line",
+  "windowFunction": "mean",
+  "pointSize": 3,
+  "autoscale": true
+},
+{
+  "type": "wig",
+  "name": "REAPR",
+  "format": "bedgraph",
+  "url": "{{ page.reapr_score_per_base }}",
+  "color": "red",
+  "guideLines": [
+    {"color": "green", "dotted": true, "y": 0}
+  ],
+  "graphType": "line",
+  "windowFunction": "mean",
+  "pointSize": 3,
+  "autoscale": false,
+  "min": 0,
+  "max": 1
+},
+{
+  "type": "alignment",
+  "format": "bam",  
+  "name": "Alignments",
+  "url": "{{ page.reapr_bam }}",
+  "indexURL": "{{ page.reapr_bai }}"
+}
+]
