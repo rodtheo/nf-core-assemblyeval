@@ -1,0 +1,5 @@
+Jun-24 09:22:14.128 [main] INFO  com.askimed.nf.test.App - nf-test 0.8.4
+Jun-24 09:22:14.144 [main] INFO  com.askimed.nf.test.App - Arguments: [test, --tag, merfin/hist, --profile, docker]
+Jun-24 09:22:15.175 [main] INFO  com.askimed.nf.test.App - Nextflow Version: 24.04.2
+Jun-24 09:22:15.182 [main] WARN  com.askimed.nf.test.commands.RunTestsCommand - No nf-test config file found.
+Jun-24 09:22:15.182 [main] ERROR com.askimed.nf.test.commands.RunTestsCommand - No tests ot directories found containing test files.

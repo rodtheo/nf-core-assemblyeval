@@ -19,7 +19,11 @@
 
 ## Introduction
 
-**nf-core/assemblyeval** is a bioinformatics pipeline that ...
+**nf-core/assemblyeval** is a bioinformatics pipeline that applies the four C’s genome assembly quality check procedure evaluating contamination, contiguity, completeness and correctness. Furthermore, due to errors that can be introduced by the sequencing technology or the assembly tool used, it is important at the end of pipeline’s run to inspect more assertively candidate misjoined regions. Therefore, in addition to producing a detailed comparative report showing numerous metrics and graphics evaluating the quality of the assemblies, the pipeline provides an interactive report showing candidate assembly errors at the single-nucleotide level. 
+
+
+![pipeline](assets/assembly-eval-pipeline-v5.png)
+
 
 <!-- TODO nf-core:
    Complete this sentence with a 2-3 sentence summary of what types of data the pipeline ingests, a brief overview of the
@@ -32,7 +36,13 @@
 <!-- TODO nf-core: Fill in short bullet-pointed list of the default steps in the pipeline -->
 
 1. Read QC ([`FastQC`](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/))
-2. Present QC for raw reads ([`MultiQC`](http://multiqc.info/))
+2. Removal of contaminants (_Optional_):
+    1. Removal of adptor/vector contaminants ([`FCS-adaptor`])
+    2. Removal of genome contaminants ([`FCS-GX`])
+    3. Generate a clean assembly excluding contaminants ([`FCS-CLEAN`])
+3. Module 
+4. TO DO
+
 
 ## Usage
 
@@ -55,14 +65,42 @@ Each row represents a fastq file (single-end) or a pair of fastq files (paired e
 
 -->
 
-Now, you can run the pipeline using:
+First, prepare a file with your input data that looks like file `assets/chla_test_input_channels.yaml`:
+
+```yaml
+samples:
+  - metadata:
+      id: Ctrachomatis
+      kmer_size: 21
+      ploidy: 1
+      # Organism domain: either euk or prok
+      organism_domain: prok
+      taxid: "315277" 
+      busco_lineages:
+        - "chlamydiae_odb10"
+    assembly:
+      - id: ref
+        pri_asm: "./data_test/GCF_000012125.1_ASM1212v1_genomic.fasta"
+      - id: ctracho_5inversions_default
+        pri_asm: "./data_test/ctracho_5inversions_default.simseq.genome.fa"
+      - id: ctracho_10persnp_default
+        pri_asm: "./data_test/ctracho_10persnp_default.simseq.genome.fa"
+      - id: ctracho_5inversions_split
+        pri_asm: "./data_test/Ctrachomatis_ctracho_5inversions_default_cleaned_breaked.fasta"
+    illumina:
+      - read1: "./data_test/mason_R1_001.fastq.gz"
+        read2: "./data_test/mason_R2_001.fastq.gz"
+```
+
+Each row in `assembly` section represents an assembly obtained from a different genome assembler tool. The section `illumina` indicates a pair of fastq files (paired end) used to validate the assembly.
+
+Now, you can test the pipeline using:
 
 <!-- TODO nf-core: update the following command to include all required parameters for a minimal example -->
 
 ```bash
-nextflow run nf-core/assemblyeval \
-   -profile <docker/singularity/.../institute> \
-   --input samplesheet.csv \
+nextflow run main.nf \
+   -profile docker,test \
    --outdir <OUTDIR>
 ```
 
@@ -74,9 +112,12 @@ For more details and further functionality, please refer to the [usage documenta
 
 ## Pipeline output
 
-To see the results of an example test run with a full size dataset refer to the [results](https://nf-co.re/assemblyeval/results) tab on the nf-core website pipeline page.
+To see the results of an example test run with a full size dataset refer to the [results](https://rodtheo.github.io/simposio-biomol-2024/simulations/Report-for-General-Evaluation-of-Assemblies_multiqc_report.html) and the [IGV report](https://rodtheo.github.io/simposio-biomol-2024/simulations/Ctrachomatis_ctracho_5inversions_default_report_mqc.html).
+
+After the pipeline finishes, the main outputs are self-contained HTML located at `<OUTDIR>/multiqc/` and `<OUTDIR>/igvreport/`.
+
 For more details about the output files and reports, please refer to the
-[output documentation](https://nf-co.re/assemblyeval/output).
+[output documentation]().
 
 ## Credits
 

@@ -1,0 +1,87 @@
+samples:
+  - metadata:
+      id: Ctrachomatis
+      kmer_size: 21
+      ploidy: 1
+      # Organism domain: either euk or prok
+      organism_domain: prok
+      taxid: "315277" 
+      busco_lineages:
+        # - "fungi_odb10"
+        - "chlamydiae_odb10"
+    assembly:
+      - id: ref
+        # pri_asm: "https://raw.githubusercontent.com/rodtheo/snakemake_pipelines/master/evaluate_assemblies/dataset/assembly.fa"
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/ref/ncbi_dataset/data/GCF_000012125.1/GCF_000012125.1_ASM1212v1_genomic.fasta"
+        # pri_gfa: "https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/genomics/sarscov2/illumina/gfa/assembly.gfa"
+        # alt_asm: "https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/genomics/homo_sapiens/genome/genome2.fasta"
+        # alt_gfa: "https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/genomics/sarscov2/illumina/gfa/assembly.gfa"
+      - id: ctracho_5inversions_default
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/simulated/ctracho_5inversions_default.simseq.genome.fa"
+      - id: ctracho_10persnp_default
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/simulated/ctracho_10persnp_default.simseq.genome.fa"
+      - id: great_assembly_00
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/great_dataset/assemblies/assembly_00.fasta"
+      - id: great_assembly_01
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/great_dataset/assemblies/assembly_01.fasta"
+      - id: great_assembly_02
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/great_dataset/assemblies/assembly_02.fasta"
+      - id: great_assembly_03
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/great_dataset/assemblies/assembly_03.fasta"
+      - id: great_assembly_04
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/great_dataset/assemblies/assembly_04.fasta"
+      - id: great_assembly_05
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/great_dataset/assemblies/assembly_05.fasta"
+      - id: great_assembly_06
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/great_dataset/assemblies/assembly_06.fasta"
+      - id: great_assembly_07
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/great_dataset/assemblies/assembly_07.fasta"
+      - id: great_assembly_08
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/great_dataset/assemblies/assembly_08.fasta"
+      - id: great_assembly_09
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/great_dataset/assemblies/assembly_09.fasta"
+      - id: good_assembly_00
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/good_dataset/assemblies/assembly_00.fasta"
+      - id: good_assembly_01
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/good_dataset/assemblies/assembly_01.fasta"
+      - id: good_assembly_02
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/good_dataset/assemblies/assembly_02.fasta"
+      - id: good_assembly_03
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/good_dataset/assemblies/assembly_03.fasta"
+      - id: good_assembly_04
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/good_dataset/assemblies/assembly_04.fasta"
+      - id: good_assembly_05
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/good_dataset/assemblies/assembly_05.fasta"
+      - id: good_assembly_06
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/good_dataset/assemblies/assembly_06.fasta"
+      - id: good_assembly_07
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/good_dataset/assemblies/assembly_07.fasta"
+      - id: good_assembly_08
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/good_dataset/assemblies/assembly_08.fasta"
+      - id: good_assembly_09
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/good_dataset/assemblies/assembly_09.fasta"
+      - id: bad_assembly_00
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/bad_dataset/assemblies/assembly_00.fasta"
+      - id: bad_assembly_01
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/bad_dataset/assemblies/assembly_01.fasta"
+      - id: bad_assembly_02
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/bad_dataset/assemblies/assembly_02.fasta"
+      - id: bad_assembly_03
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/bad_dataset/assemblies/assembly_03.fasta"
+      - id: bad_assembly_04
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/bad_dataset/assemblies/assembly_04.fasta"
+      - id: bad_assembly_05
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/bad_dataset/assemblies/assembly_05.fasta"
+      - id: bad_assembly_06
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/bad_dataset/assemblies/assembly_06.fasta"
+      - id: bad_assembly_07
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/bad_dataset/assemblies/assembly_07.fasta"
+      - id: bad_assembly_08
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/bad_dataset/assemblies/assembly_08.fasta"
+      - id: bad_assembly_09
+        pri_asm: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/bad_dataset/assemblies/assembly_09.fasta"
+      - id: ctracho_5inversions_split
+        pri_asm: "Ctrachomatis_ctracho_5inversions_default_cleaned_breaked.fasta"
+    illumina:
+      - read1: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/mason_R1_001.fastq.gz"
+        read2: "/home/rodtheo/Bioinfo/data/trycycler-datasets/demo-datasets/mason_R2_001.fastq.gz"

@@ -54,7 +54,7 @@ workflow NFCORE_ASSEMBLYEVAL {
     // WORKFLOW: Run pipeline
     //
     ASSEMBLYEVAL (
-        samplesheet
+        // samplesheet
     )
 
     emit:
@@ -88,7 +88,7 @@ workflow {
     // WORKFLOW: Run main workflow
     //
     NFCORE_ASSEMBLYEVAL (
-        PIPELINE_INITIALISATION.out.samplesheet
+        params.input
     )
 
     //

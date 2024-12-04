@@ -1,0 +1,26 @@
+samples:
+  - metadata:
+      id: Aterreus
+      kmer_size: 21
+      ploidy: 1
+      # Organism domain: either euk or prok
+      organism_domain: euk
+      taxid: "33178" 
+      busco_lineages:
+        - "fungi_odb10"
+    assembly:
+      - id: canu
+        pri_asm: "/home/rodtheo/Bioinfo/project-data/2019-02-28-AterreusAssembly/assemblies/canu.fasta"
+      - id: canupolished
+        pri_asm: "/home/rodtheo/Bioinfo/project-data/2019-02-28-AterreusAssembly/assemblies/canu_polished.fasta"
+      - id: spades
+        pri_asm: "/home/rodtheo/Bioinfo/project-data/2019-02-28-AterreusAssembly/assemblies/spades.fasta"
+      - id: unicycler
+        pri_asm: "/home/rodtheo/Bioinfo/project-data/2019-02-28-AterreusAssembly/assemblies/unicycler.fasta"
+      - id: unicyclerpolished
+        pri_asm: "/home/rodtheo/Bioinfo/project-data/2019-02-28-AterreusAssembly/assemblies/unicycler_polished.fasta"
+      - id: canupolishedcleaned
+        pri_asm: "/home/rodtheo/Bioinfo/project-data/2019-02-28-AterreusAssembly/assemblies/canu_polished_cleaned.fasta"
+    illumina:
+      - read1: "/home/rodtheo/Bioinfo/project-data/2019-02-28-AterreusAssembly/data/ATCC.1.fastq.gz"
+        read2: "/home/rodtheo/Bioinfo/project-data/2019-02-28-AterreusAssembly/data/ATCC.2.fastq.gz"

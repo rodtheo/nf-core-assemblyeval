@@ -1,0 +1,37 @@
+custom_data:
+    kmer:
+        parent_id: 'kmer'
+        parent_name: "K-mer profiles"
+        plot_type: 'html'
+        data: '<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#JanelaModalKmer">
+    Help
+</button>
+
+<div id="JanelaModalKmer" class="modal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">HELP</h3>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+            </div>
+
+            <div class="modal-body">
+                <blockquote>Assembly quality assessment using the k-mer spectrum</blockquote>
+                <p>The k-mer spectrum of the reads (left) and merqry plot form assembly QC.
+                    The black area represents the k-mers present in the read set but not in the assembly, and the red area represents what is present in the assembly once.
+                    Larger assembly size than the genome size estimate, higher 1n peak in the assembly (red) than absent (black) and relatively high BUSCO duplication scores
+                    all indicate there are uncollapsed haplotypes in the haploid genome assembly which will require downstream haplotype collapsing.
+                </p>
+                <p>Charactarization of sequencing dataset using the distribution of k-mer coverages.
+                    The k-mer spectrum can estimage genomic features such as genome size, heterozygosity or repetitiveness.</p>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>'
+

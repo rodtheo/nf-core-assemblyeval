@@ -1,0 +1,26 @@
+<!--
+id: 'kmer_{{ asm.id }}'
+parent_id: 'kmer'
+section_name: 'K-mer profile - {{ asm.id }}'
+description: "This section is created using genomescope2 for illumina reads from {{ asm.id }}"
+-->
+
+<!-- <p>MultiQC uses <a href="https://getbootstrap.com/" target="_blank">Bootstrap</a>, so you can use any of the
+<a href="#" class="btn btn-primary">Bootstrap CSS classes</a> you like in your HTML.</p>
+<img src="../assets/nf-core-assemblyeval_logo_light.png" class="rounded float-left" alt="Responsive image">
+<img src="../assets/nf-core-assemblyeval_logo_light.png" class="rounded float-right" alt="Responsive image"> -->
+<blockquote>K-mer Profile - {{ asm.id }}</blockquote>
+<p>
+<a class="btn btn-primary" data-toggle="collapse" href="#collapseExample_{{ asm.id }}" role="button" aria-expanded="false" aria-controls="collapseExample">
+    Expand graphs for {{ asm.id }}
+</a>
+</p>
+<div class="collapse" id="collapseExample_{{ asm.id }}">
+<div class="card card-body">
+    On the left: linear model. On the right: fitted model to k-mer spectrum.
+    <div>
+    <img src={{ asm.img_left|tojson }} class="rounded float-left" alt="Responsive image" width="600">
+    <img src={{ asm.img_right|tojson }} class="rounded float-right" alt="Responsive image" width="600">
+    </div>
+</div>
+</div>
