@@ -1,0 +1,22 @@
+samples:
+  - metadata:
+      id: Ctrachomatis
+      kmer_size: 21
+      ploidy: 1
+      # Organism domain: either euk or prok
+      organism_domain: prok
+      taxid: "315277" 
+      busco_lineages:
+        - "chlamydiae_odb10"
+    assembly:
+      - id: ref
+        pri_asm: "./data_test/GCF_000012125.1_ASM1212v1_genomic.fasta"
+      - id: ctracho_5inversions_default
+        pri_asm: "./data_test/ctracho_5inversions_default.simseq.genome.fa"
+      - id: ctracho_10persnp_default
+        pri_asm: "./data_test/ctracho_10persnp_default.simseq.genome.fa"
+      - id: ctracho_5inversions_split
+        pri_asm: "./data_test/Ctrachomatis_ctracho_5inversions_default_cleaned_breaked.fasta"
+    illumina:
+      - read1: "./data_test/mason_R1_001.fastq.gz"
+        read2: "./data_test/mason_R2_001.fastq.gz"

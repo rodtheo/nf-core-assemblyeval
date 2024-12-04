@@ -7,3 +7,5 @@ data/*.fq
 data/*.fa
 out_results/
 work/
+out_*/
+data/

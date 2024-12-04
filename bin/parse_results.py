@@ -171,7 +171,7 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
                                     match_comp = re.match(r'^COMPLETENESS:\s+(\S+)$', line)
                                     if match_comp:
                                             comp_score = float(match_comp.group(1))
-                dict_sample['merfin_completeness'] = float(comp_score)
+                dict_sample['merfin_completeness'] = float(comp_score)*100
 
                 # MATCH MERFIN RESULTS - QV*
                 merfin_file_qv = my_merfin_qv_file[idx]
@@ -229,11 +229,13 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
                 dict_sample['contigs']    = '{:,}'.format(int(array_sample[12]))
                 dict_sample['n50']        = '{:,}'.format(int(array_sample[16]))
                 dict_sample['largest']    = '{:,}'.format(int(array_sample[13]))
+                dict_sample['auN']    = '{:,}'.format(float(array_sample[18]))
 
                 dict_sample['genomesize'] = int(array_sample[6])
                 dict_sample['contigs']    = int(array_sample[12])
                 dict_sample['n50']        = int(array_sample[16])
                 dict_sample['largest']    = int(array_sample[13])
+                dict_sample['auN']    = float(array_sample[18])
                 # concatenating results
                 # dict_sample['genomesize_class'] = "tg-lboi"
                 dict_appended = {**dict_sample, **dict_samp}
@@ -296,7 +298,7 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
             # {'name': 'Sample_AssemblerA', 'ale': -100937528.909207, 'reapr_total_errors': '402', 'reapr_fcd': '196', 'reapr_low': '206', 'genomesize': 4090859, 
             # 'contigs': 2, 'n50': 4065161, 'largest': 4065161, 'pctcomplete': '6.2', 'pctsingle': '5.7', 'pctduplicated': '0.5', 'pctfragmented': '3.0', 'pctmissing': '90.8', 'total_busco_searched_genes': '758', 'ncomplete': '47', 'nsingle': '43', 'nduplicated': '4', 'nfragmented': '23', 'nmissing': '688'}, {'name': 'Sample_AssemblerB', 'ale': -100937528.909207, 'reapr_total_errors': '402', 'reapr_fcd': '196', 'reapr_low': '206', 'genomesize': 4090859, 'contigs': 2, 'n50': 4065161, 'largest': 4065161, 'pctcomplete': '6.2', 'pctsingle': '5.7', 'pctduplicated': '0.5', 'pctfragmented': '3.0', 'pctmissing': '90.8', 'total_busco_searched_genes': '758', 'ncomplete': '47', 'nsingle': '43', 'nduplicated': '4', 'nfragmented': '23', 'nmissing': '688'}
             dict_names = {'name': 'Assembly', 'ale': 'ALE score (neglog)', 'reapr_total_errors': 'REAPR erros', 'reapr_fcd': 'REAPR fcd', 'reapr_low': 'REAPR low',
-             'genomesize': 'Assembly length', 'contigs': 'contigs', 'n50': 'N50', 'largest': 'Largest contig',
+             'genomesize': 'Assembly length', 'contigs': 'contigs', 'n50': 'N50', 'largest': 'Largest contig', 'auN': 'auN',
              'pctcomplete': 'BUSCO complete (%)', 'pctsingle': 'BUSCO single (%)', 'pctduplicated': 'BUSCO duplicated (%)', 'pctfragmented':'BUSCO fragmented (%)',
               'pctmissing': 'BUSCO missing (%)',
                'ncomplete': 'BUSCO complete', 'nsingle': 'BUSCO single', 'nduplicated': 'BUSCO duplicated',
@@ -309,7 +311,7 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
             #  'Assembly length', 'contigs', 'N50', 'Largest contig', 'BUSCO complete (%)', 'BUSCO single (%)', 'BUSCO duplicated (%)', 'BUSCO fragmented (%)', 'BUSCO missing (%)', 'BUSCO complete', 'BUSCO single', 'BUSCO duplicated', 'BUSCO fragmented', 'BUSCO missing', 'ALE normalized']
         else:
             dict_names = {'name': 'Assembly', 'ale': 'ALE score (neglog)', 'reapr_total_errors': 'REAPR erros', 'reapr_fcd': 'REAPR fcd', 'reapr_low': 'REAPR low',
-             'genomesize': 'Assembly length', 'contigs': 'contigs', 'n50': 'N50', 'largest': 'Largest contig',
+             'genomesize': 'Assembly length', 'contigs': 'contigs', 'n50': 'N50', 'largest': 'Largest contig', 'auN': 'auN',
              'pctcomplete': 'COMPLEASM complete (%)', 'pctsingle': 'COMPLEASM single (%)', 'pctduplicated': 'COMPLEASM duplicated (%)', 'pctfragmented':'COMPLEASM fragmented Class I (%)', 'pctincomplete':'COMPLEASM fragmented Class II (%)',
               'pctmissing': 'COMPLEASM missing (%)',
                'ncomplete': 'COMPLEASM complete', 'nsingle': 'COMPLEASM single', 'nduplicated': 'COMPLEASM duplicated', 'nfragmented': 'COMPLEASM fragmented Class I', 
@@ -321,7 +323,7 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
         c.to_csv(file_out, index=False, sep="\t")
 
         data_read = pd.read_csv(file_out, sep="\t", header=0, index_col=False)
-        greater_better = ['Merfin QV*', 'Error-free bases (%)', 'N50', 'BUSCO complete (%)', 'BUSCO single (%)']
+        greater_better = ['Merfin QV*', 'Error-free bases (%)', 'BUSCO complete (%)', 'BUSCO single (%)', 'auN', 'Merfin Completness']
         smaller_better = ['REAPR erros', 'BUSCO duplicated (%)', 'BUSCO fragmented (%)', 'BUSCO missing (%)']
         complement = data_read[smaller_better].max(axis=0)
 
@@ -337,7 +339,7 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
         scaler.fit(data_read[greater_better])
         scaler_df = scaler.transform(data_read[greater_better])
 
-        score = np.mean(np.concatenate((scaler_df, scaler_sb_df), axis=1), axis=1)
+        score = np.mean(np.concatenate((scaler_df, scaler_sb_df), axis=1), axis=1)*100
 
         data_read['Score'] = score
 

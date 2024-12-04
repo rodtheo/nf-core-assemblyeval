@@ -60,6 +60,9 @@ workflow CORRECTNESS_ASM {
 	Channel.empty()
         .set { reapr_out_ch }
 
+	Channel.empty()
+        .set { igv_report_out_ch }
+
 	joined_ch.multiMap{ meta_id, asm, bam ->
 		asm: asm
 		reapr: bam }.set{ input_reapr_ch }
@@ -233,6 +236,8 @@ workflow CORRECTNESS_ASM {
 
 	reapr_out_ch.mix( REAPR.out.reapr_summary ).set{ reapr_out_ch }
 
+	igv_report_out_ch.mix( IGVREPORTS.out.report.map{ meta, report -> report } ).set{ igv_report_out_ch }
+
 	// Execute QUAST without a reference and a GFF
 	// QUAST ( reference_ch, [[], []], [[], []] );
 
@@ -260,5 +265,6 @@ workflow CORRECTNESS_ASM {
     emit:
     ale = ale_out_ch   // queue channel: [ sample_id, file(bam_file) ]
 	reapr = reapr_out_ch
+	igv_report = igv_report_out_ch
 	versions = REAPR.out.versions.mix(ALE.out.versions)
 }

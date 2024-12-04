@@ -109,24 +109,29 @@ workflow ASSEMBLYEVAL {
     //
     // MODULE: Contamination
     //
-    CONTAMINATION_ASM( illumina_ch, PREPARE_INPUT.out.assemblies )
+    if (!params.skip_contamination) {
+        
+        CONTAMINATION_ASM( illumina_ch, PREPARE_INPUT.out.assemblies )
 
-    ch_asm = CONTAMINATION_ASM.out.asms.filter{ it != [] }
+        ch_asm = CONTAMINATION_ASM.out.asms.filter{ it != [] }
 
-    ch_asm.view{ "OUT MIXED: $it" }
+        ch_asm.view{ "OUT MIXED: $it" }
 
-    Channel.fromPath("$projectDir/assets/template_contaminant_mqc.html").combine(CONTAMINATION_ASM.out.fcs).set{ to_jinja_contaminant_ch }
+        Channel.fromPath("$projectDir/assets/template_contaminant_mqc.html").combine(CONTAMINATION_ASM.out.fcs).set{ to_jinja_contaminant_ch }
 
-    JINJA_CONTAMINANT (
-        to_jinja_contaminant_ch.map{ tp, meta, fcs_report -> tp },
-        to_jinja_contaminant_ch.map{ tp, meta, fcs_report -> meta.get("id") },
-        to_jinja_contaminant_ch.map{ tp, meta, fcs_report -> fcs_report }
-    )
+        JINJA_CONTAMINANT (
+            to_jinja_contaminant_ch.map{ tp, meta, fcs_report -> tp },
+            to_jinja_contaminant_ch.map{ tp, meta, fcs_report -> meta.get("id") },
+            to_jinja_contaminant_ch.map{ tp, meta, fcs_report -> fcs_report }
+        )
 
 
-    JINJA_CONTAMINANT.out.rendered.view{ "================== OUT JINJA CONTAMINANT: $it"}
+        JINJA_CONTAMINANT.out.rendered.view{ "================== OUT JINJA CONTAMINANT: $it"}
 
-    ch_multiqc_files = ch_multiqc_files.mix(JINJA_CONTAMINANT.out.rendered)
+        ch_multiqc_files = ch_multiqc_files.mix(JINJA_CONTAMINANT.out.rendered)
+    } else {
+        ch_asm = PREPARE_INPUT.out.assemblies
+    }
 
     //
     // MODULE: Completeness Metrics
@@ -263,6 +268,7 @@ workflow ASSEMBLYEVAL {
      
     // ch_multiqc_files = ch_multiqc_files.mix(Channel.fromPath("$projectDir/assets/html_with_comment_mqc.html"))
     ch_multiqc_files = ch_multiqc_files.mix(JINJA_MULTIQC.out.rendered)
+    // ch_multiqc_files = ch_multiqc_files.mix(out_quast_ch)
     
     ch_multiqc_logo = ch_multiqc_logo.mix(Channel.fromPath("$projectDir/assets/nf-core-assemblyeval_logo_light.png"))
 

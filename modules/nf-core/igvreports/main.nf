@@ -37,7 +37,7 @@ process IGVREPORTS {
     $args \
     $fasta \
     --track-config ${track_config} \
-    --output ${prefix}_report.html
+    --output ${prefix}_report_mqc.html
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
