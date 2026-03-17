@@ -159,10 +159,12 @@ workflow ASSEMBLYEVAL {
     // // READ_MAPPING.out.bam.view{ "*** ETAPA 2 - BAM: $it"}
     // // READ_MAPPING.out.bai.view{ "*** ETAPA 2 - BAI: $it"}
 
-    
-    CORRECTNESS_ASM (
+    if (!params.skip_correctness) {
+        CORRECTNESS_ASM (
        READ_MAPPING.out.joined_asm_bam, READ_MAPPING.out.asm, READ_MAPPING.out.bam, READ_MAPPING.out.bai
     )
+    }
+    
 
     KMER_PROFILE (
         illumina_ch, ch_asm
@@ -171,19 +173,29 @@ workflow ASSEMBLYEVAL {
     // PREPARE_INPUT.out.assemblies.view{ "ASSEMBLIES TO KMER PROFILE: $it" }
     // // parse_results_to_table(args.genomes_ids, args.ale_res, args.reapr_res, args.busco_re_summary, args.quast_res, args.file_out)
     
-    out_asm_ch = CORRECTNESS_ASM.out.reapr.map{ meta, reapr -> meta['id'] }.collect( sort: true ).view{ "ASSEMBLIES: $it" }
-    out_ale_ch = CORRECTNESS_ASM.out.ale.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
-    out_reapr_ch = CORRECTNESS_ASM.out.reapr.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
+    out_ale_ch = Channel.empty()
+    out_reapr_ch = Channel.empty()
+    if (!params.skip_correctness) {
+        out_asm_ch = CORRECTNESS_ASM.out.reapr.map{ meta, reapr -> meta['id'] }.collect( sort: true ).view{ "ASSEMBLIES: $it" }
+        out_ale_ch = CORRECTNESS_ASM.out.ale.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
+        out_reapr_ch = CORRECTNESS_ASM.out.reapr.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
+        ch_versions = ch_versions.mix(CORRECTNESS_ASM.out.versions)
+    } else {
+        out_ale_ch = out_ale_ch.mix(Channel.from('[]')).collect{ it[1] }
+        out_reapr_ch = out_reapr_ch.mix(Channel.from('[]')).collect{ it[1] }
+    }
+    out_asm_ch = COMPLETENESS_ASM.out.busco_short_summaries_txt.map{ meta, reapr -> meta['id'] }.collect( sort: true ).view{ "ASSEMBLIES: $it" }
     out_busco_re_summary_ch = COMPLETENESS_ASM.out.busco_short_summaries_txt.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
     out_quast_ch = CONTIGUITY_ASM.out.quast_tsv.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
     out_merfin_qv_ch = KMER_PROFILE.out.merfin_logs.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
     out_merfin_completeness_ch = KMER_PROFILE.out.merfin_completeness.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
+    out_compleasm_ch = COMPLETENESS_ASM.out.compleasm_full_table.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
 
     // // out_table_ch = Channel.fromPath("out_table.csv")
     
     // COMPLETENESS_ASM.out.busco_short_summaries_txt.view{ "REAPR: $it" }
     
-    PARSE_RESULTS ( out_asm_ch, out_ale_ch, out_reapr_ch, out_busco_re_summary_ch, out_quast_ch, out_merfin_qv_ch, out_merfin_completeness_ch  )
+    PARSE_RESULTS ( out_asm_ch, out_ale_ch, out_reapr_ch, out_busco_re_summary_ch, out_quast_ch, out_merfin_qv_ch, out_merfin_completeness_ch, out_compleasm_ch  )
     // PARSE_RESULTS.out.res.view{ "\n\nRESULTS ARE IN: $it"}
 
     // // // CORRECTNESS_ASM.out.reapr.collect( {it[1]}, sort: {it.getName()} ).set{ new_collect }
@@ -196,7 +208,7 @@ workflow ASSEMBLYEVAL {
     //     ch_versions.unique().collectFile(name: 'collated_versions.yml')
     // )
 
-    ch_versions = ch_versions.mix(KMER_PROFILE.out.versions).mix(CORRECTNESS_ASM.out.versions).mix(READ_MAPPING.out.versions).mix(CONTIGUITY_ASM.out.versions).mix(COMPLETENESS_ASM.out.versions)
+    ch_versions = ch_versions.mix(KMER_PROFILE.out.versions).mix(READ_MAPPING.out.versions).mix(CONTIGUITY_ASM.out.versions).mix(COMPLETENESS_ASM.out.versions)
 
     //
     // Collate and save software versions

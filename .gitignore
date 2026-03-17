@@ -9,3 +9,5 @@ out_results/
 work/
 out_*/
 data/
+*.dot
+*.html

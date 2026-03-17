@@ -19,6 +19,9 @@ workflow COMPLETENESS_ASM {
 	Channel.empty()
         .set { results_summary_ch }
 
+		Channel.empty()
+        .set { results_full_table_ch }
+
 	reference.map{ meta, assemblies -> {
 		def meta_new = meta.clone();
 		meta_new.put("id", meta.get("id")+"_"+meta.get("build"));
@@ -40,6 +43,7 @@ workflow COMPLETENESS_ASM {
 	lineages_ch = reference_ch.map{ meta_asm, asm -> meta_asm['busco_lineages'][0]}.first()
 	// lineages_ch.view{ "LINEAGES: $it" }
 
+	Channel.empty().set{ ch_v }
 
 	if ( params.busco == true){
 		BUSCO_BUSCO ( reference_ch, 'genome', lineages_ch, [], [] )
@@ -47,14 +51,16 @@ workflow COMPLETENESS_ASM {
 		results_dir_ch.mix (BUSCO_BUSCO.out.busco_dir ).set{ results_dir_ch }
 		results_summary_ch.mix (BUSCO_BUSCO.out.short_summaries_txt).set{ results_summary_ch }
 
-		
+		ch_v.mix (BUSCO_BUSCO.out.versions).set{ ch_v }
 
 	} else {
 		COMPLEASM ( reference_ch, lineages_ch )
 
 		results_dir_ch.mix (COMPLEASM.out.busco_dir ).set{ results_dir_ch }
 		results_summary_ch.mix (COMPLEASM.out.short_summaries_txt).set{ results_summary_ch }
-		
+		results_full_table_ch.mix (COMPLEASM.out.full_table).set{ results_full_table_ch }
+		ch_v.mix (COMPLEASM.out.versions).set{ ch_v }
+
 	}
 
 
@@ -83,5 +89,6 @@ workflow COMPLETENESS_ASM {
 	busco = results_dir_ch
 	// busco_short_summaries_txt = BUSCO.out.short_summaries_txt
 	busco_short_summaries_txt = results_summary_ch
-	versions = BUSCO_BUSCO.out.versions
+	compleasm_full_table = results_full_table_ch
+	versions = ch_v
 }

@@ -18,6 +18,3 @@ samples:
         pri_asm: "./data_test/ctracho_10persnp_default.simseq.genome.fa"
       - id: ctracho_5inversions_split
         pri_asm: "./data_test/Ctrachomatis_ctracho_5inversions_default_cleaned_breaked.fasta"
-    illumina:
-      - read1: "./data_test/mason_R1_001.fastq.gz"
-        read2: "./data_test/mason_R2_001.fastq.gz"

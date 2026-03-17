@@ -5,7 +5,7 @@ process COMPLEASM {
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'https://depot.galaxyproject.org/singularity/compleasm:0.2.6--pyh7cba7a3_0':
-        'biocontainers/compleasm:0.2.6--pyh7cba7a3_0' }"
+        'quay.io/biocontainers/compleasm:0.2.7--pyh7e72e81_1' }"
 
     input:
     tuple val(meta), path(asm)
@@ -18,6 +18,7 @@ process COMPLEASM {
     output:
     tuple val(meta), path("*-compleasm"), emit: busco_dir
     tuple val(meta), path("*-compleasm/summary.txt"), emit: short_summaries_txt
+    tuple val(meta), path("*-compleasm/${lineage}/full_table.tsv"), emit: full_table
     path "versions.yml", emit: versions
 
     when:
@@ -27,11 +28,11 @@ process COMPLEASM {
     def prefix = task.ext.prefix ?: "${meta.id}-${lineage}"
     def args   = task.ext.args ?: ''
     // def busco_config = config_file ? "--config $config_file" : ''
-    def compleasm_lineage = lineage.equals('auto') ? '--auto-lineage' : "-l ${lineage}"
+    def compleasm_lineage = lineage.equals('auto') ? '--autolineage' : "-l ${lineage}"
     // def busco_lineage_dir = busco_lineages_path ? "--download_path ${busco_lineages_path}" : ''
     """
     compleasm run \\
-        -t$task.cpus \\
+        -t $task.cpus \\
         $compleasm_lineage \\
         $args \\
         -a $asm \\

@@ -1,0 +1,29 @@
+samples:
+  - metadata:
+      id: Dmelanogaster
+      kmer_size: 21
+      ploidy: 2
+      # Organism domain: either euk or prok
+      organism_domain: euk
+      taxid: "7227" 
+      busco_lineages:
+        - "drosophila_odb12"
+        #- "chlamydia_odb12"
+    assembly:
+      - id: ref
+        pri_asm: "/media/admin-compgen/Data_Volume/Data/PACBIO-CLR-POLISH-DATA/Dmelanogaster/ncbi_dataset/data/GCF_000001215.4/GCF_000001215.4_Release_6_plus_ISO1_MT_genomic.fna"
+      - id: PBcR-CA
+        pri_asm: "/media/admin-compgen/Data_Volume/Data/PACBIO-CLR-POLISH-DATA/Dmelanogaster/ncbi_dataset/data/GCA_002050065.1/GCA_002050065.1_CA_8.1_PBcR_genomic.fna"
+      - id: flye
+        pri_asm: "/media/admin-compgen/Data_Volume/Data/PACBIO-CLR-POLISH-DATA/Dmelanogaster/flye.v29.dmelanogaster.ont.30x.fasta"
+      - id: mhap_all
+        pri_asm: "/media/admin-compgen/Data_Volume/Data/PACBIO-CLR-POLISH-DATA/Dmelanogaster/MHAP-CA/dmel.all.fasta"
+      - id: mhap_ctg
+        pri_asm: "/media/admin-compgen/Data_Volume/Data/PACBIO-CLR-POLISH-DATA/Dmelanogaster/MHAP-CA/dmel.ctg.fasta"
+      - id: mhap_quiver_all
+        pri_asm: "/media/admin-compgen/Data_Volume/Data/PACBIO-CLR-POLISH-DATA/Dmelanogaster/MHAP-CA/dmel.quiver.all.fasta"
+      - id: mhap_quiver_ctg
+        pri_asm: "/media/admin-compgen/Data_Volume/Data/PACBIO-CLR-POLISH-DATA/Dmelanogaster/MHAP-CA/dmel.quiver.ctg.fasta"
+    illumina:
+      - read1: "/media/admin-compgen/Data_Volume/Data/PACBIO-CLR-POLISH-DATA/Dmelanogaster/SRR29479671_1.fastq.gz"
+        read2: "/media/admin-compgen/Data_Volume/Data/PACBIO-CLR-POLISH-DATA/Dmelanogaster/SRR29479671_2.fastq.gz"

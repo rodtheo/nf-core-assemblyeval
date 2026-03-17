@@ -20,6 +20,7 @@ process PARSE_RESULTS {
     val quast_res
     val merfin_qv_res
     val merfin_completeness_res
+    val compleasm_table
 
     output:
     tuple val(meta), path('table_data_mqc.out'), emit: res
@@ -41,6 +42,7 @@ process PARSE_RESULTS {
         --quast_res "$quast_res" \\
         --merfin_qv_res "$merfin_qv_res" \\
         --merfin_comp_res "$merfin_completeness_res" \\
+        --compleasm_table "$compleasm_table" \\
         -f table_data_mqc.out
 
     cat <<-END_VERSIONS > versions.yml
