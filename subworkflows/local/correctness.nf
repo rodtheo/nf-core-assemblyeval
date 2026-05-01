@@ -8,9 +8,11 @@ include { HEADER_FASTA_REAPR } from '../../modules/local/header_fasta_reapr'
 include { IGVREPORTS } from '../../modules/nf-core/igvreports/main'
 include { PREPARE_REPORT_IGV } from '../../modules/local/prepare_report_igv'
 include { SUBSET_REAPR } from '../../modules/local/subset_reapr'
-include { TABIX_BGZIPTABIX as TABIX_BGZIPTABIX; TABIX_BGZIPTABIX as TABIX_BGZIPTABIX_REAPR } from '../../modules/nf-core/tabix/bgziptabix/main'
+include { TABIX_BGZIPTABIX as TABIX_BGZIPTABIX; TABIX_BGZIPTABIX as TABIX_BGZIPTABIX_REAPR; TABIX_BGZIPTABIX as TABIX_BGZIPTABIX_CRAQ } from '../../modules/nf-core/tabix/bgziptabix/main'
 include { REAPER_BEDGRAPH } from '../../modules/local/REAPR_BEDGRAPH'
 include { CRAQ } from '../../modules/local/craq/main'
+include { MINIMAP2_ALIGN } from '../../modules/nf-core/minimap2/align/main'
+include { BEDTOOLS_SORT } from '../../modules/nf-core/bedtools/sort/main'
 
 workflow CORRECTNESS_ASM { 
 
@@ -19,6 +21,7 @@ workflow CORRECTNESS_ASM {
 	asm 
     bam        // queue channel: [ sample_id, file(bam_file) ]
     bai    // queue channel: [ sample_id, file(bai_file) ]
+	longreads
 
     main:
     // Quality Check input reads
@@ -58,20 +61,72 @@ workflow CORRECTNESS_ASM {
 
 	ale_out_ch.mix(ALE.out.ale).set{ ale_out_ch }
 
-	bai.view{ "\n\n %%%%%%%%%%%%%% BAI: $it\n\n" }
+	// bai.view{ "\n\n %%%%%%%%%%%%%% BAI: $it\n\n" }
 
 	bai.multiMap{ meta_id, asm, bam, bai ->
+		id: meta_id
 		asm: [['id': meta_id], asm[1]]
-		bam_shortreads: [bam[1], bai[1]] }.set{ input_craq_ch }
+		bam_shortreads: [bam[1], bai[1]]
+		bam_longreads: [] }.set{ input_craq_ch }
 
 	Channel.empty()
         .set { craq_out_ch }
 	
-	CRAQ ( input_craq_ch.asm, input_craq_ch.bam_shortreads, [] )
+	// CRAQ ( input_craq_ch.asm, input_craq_ch.bam_shortreads, [] )
 
+	Channel.empty()
+        .set { joined_longreads_ch }
+
+	if ( longreads.ifEmpty(false) ) {
+		longreads.view{ "\n\n******** LONGREADS: $it\n\n" }
+
+		input_craq_ch.asm.combine(longreads).multiMap{ meta_asm, asm, meta_long, long_reads -> 
+			// meta_long['id'] = meta_asm['id']
+			id: meta_asm['id']
+			asm: [meta_asm, asm]
+			longreads:[['id': meta_asm['id'], 'single_end': true], long_reads]
+		 }.set{ input_longreads_renamed }
+
+		//  input_craq_ch.asm.combine(longreads).map{ meta_asm, asm, meta_long, long_reads -> 
+		// 	meta_long['id'] = meta_asm['id']
+		// 	[meta_asm['id'], [meta_asm, asm], [['id': meta_asm['id'], 'single_end': true], long_reads]]
+		//  }.set{ input_longreads_renamed_debug }
+
+		// input_longreads_renamed_debug.view{ "\n\n******** LONGREADS COMBINED: $it" }
+		// input_longreads_renamed.asm.view{ "\n\n******** ASM COMBINED: $it" }
+
+
+		MINIMAP2_ALIGN ( input_longreads_renamed.longreads, input_longreads_renamed.asm, true, "bai", true, true )
+
+		// MINIMAP2_ALIGN.out.bam.view{ "\n\n******** MINIMAP2 BAM: $it\n\n" }
+
+		MINIMAP2_ALIGN.out.bam.join(MINIMAP2_ALIGN.out.index, by: [0]).map{ meta, bam, bai -> [meta['id'], [bam, bai]] }.set{ joined_longreads_ch }
+
+		// joined_longreads_ch.view{ "\n\n******** JOINED LONGREADS: $it\n\n" }
+
+		// bai.view{ "\n\n******** BAI: $it\n\n" }
+
+		joined_longreads_ch.join(bai, by: 0).multiMap{ meta_id, long_reads, asm_gen, ngs_bam, ngs_bai -> 
+			asm: [['id': meta_id], asm_gen[1]]
+			bam_shortreads: [ngs_bam[1], ngs_bai[1]]
+			bam_longreads: [long_reads[0], long_reads[1]]
+		}.set{ input_craq_ch }
+
+
+		// joined_longreads_ch.join(bai, by: 0).map{ meta_id, long_reads, asm_gen, ngs_bam, ngs_bai -> 
+		// 	[[['id': meta_id], asm_gen[1]], [ngs_bam[1], ngs_bai[1]], [long_reads[0], long_reads[1]]]
+		// }.set{ input_craq_ch_debug }
+
+		// input_craq_ch_debug.view{ "\n\n******** INPUT CRAQ COMBINED: $it\n\n" }
+	}
+
+	
+
+	CRAQ ( input_craq_ch.asm, input_craq_ch.bam_shortreads, input_craq_ch.bam_longreads )
 	craq_out_ch.mix(CRAQ.out.summary_report).set{ craq_out_ch }
+	
 
-	craq_out_ch.view{ "\n&&&&&&&&&&&&&&&&&&&&&\nCRAQ OUT: $it \n\n" }
+	// craq_out_ch.view{ "\n&&&&&&&&&&&&&&&&&&&&&\nCRAQ OUT: $it \n\n" }
 
 	Channel.empty()
         .set { reapr_out_ch }
@@ -132,17 +187,27 @@ workflow CORRECTNESS_ASM {
 		wig: wig_in
 		sizes_in: sizes_in}.set{ wig_base_ch }
 
-	wig_base_ch.wig.view{ "\n--------------\nWIG TO BEDGRAPH: $it \n\n" }
+	// wig_base_ch.wig.view{ "\n--------------\nWIG TO BEDGRAPH: $it \n\n" }
 
 	UCSC_WIGTOBIGWIG( wig_base_ch.wig, wig_base_ch.sizes_in )
 
 	UCSC_BIGWIGTOBEDGRAPH(UCSC_WIGTOBIGWIG.out)
 
 	// def ch_render_igv = true
+	// path(strER_CSE_bed), path(strER_CSH_bed), path(locER_CRE_bed), path(locER_CRH_bed)
 
-	SUBSET_REAPR( REAPR.out.reapr_score_errors )
+	craq_beds_ch = CRAQ.out.strER_bed_CSE.join(CRAQ.out.strER_bed_CSH).join(CRAQ.out.locER_bed_CRE).join(CRAQ.out.locER_bed_CRH).map{ meta, strER_CSE, strER_CSH, locER_CRE, locER_CRH -> 
+		[meta['id'], strER_CSE, strER_CSH, locER_CRE, locER_CRH] }
 
-	SUBSET_REAPR.out.reaper_bed_failure.ifEmpty('\n\n&&&&&&&&&&&&&&&&&&&&&&&&\n REAPR EMPTY\n&&&&&&&&&&&&&&&&&&&&&&&\n\n').view()
+	REAPR.out.reapr_score_errors.map{ meta, scoreerrors -> [meta['id'], meta, scoreerrors] }.set{ ch_reapr_score_to_join }
+
+	ch_reapr_score_to_join.join(craq_beds_ch, by: 0).multiMap{ meta_id, meta, scoreerrors, strER_CSE, strER_CSH, locER_CRE, locER_CRH -> 
+		reapr_scores: [meta, scoreerrors]
+		craq_beds: [meta, strER_CSE, strER_CSH, locER_CRE, locER_CRH] }.set{ reapr_score_craq_ch }
+
+	SUBSET_REAPR( reapr_score_craq_ch.reapr_scores, reapr_score_craq_ch.craq_beds )
+
+	// SUBSET_REAPR.out.reaper_bed_failure.ifEmpty('\n\n&&&&&&&&&&&&&&&&&&&&&&&&\n REAPR EMPTY\n&&&&&&&&&&&&&&&&&&&&&&&\n\n').view()
 
 	SUBSET_REAPR.out.reaper_bed_failure.countLines().branch{ v -> 
 		keep_going: v > 0
@@ -161,7 +226,7 @@ workflow CORRECTNESS_ASM {
 
 	input_chr_meta_id.combine( template_track_igv ).map{ meta_id, template -> [['id': meta_id], template]}.set{ template_track_igv }
 
-	template_track_igv.view{ "\n--------------\nTEMPLATE TRACK UPDATED IGV: $it \n\n"}
+	// template_track_igv.view{ "\n--------------\nTEMPLATE TRACK UPDATED IGV: $it \n\n"}
 
 	REAPR.out.reapr_dir.map{ meta_complete, reapr_dir -> [['id': meta_complete['id']], reapr_dir]}.set{ reapr_dir_small_meta_ch }
 
@@ -170,12 +235,15 @@ workflow CORRECTNESS_ASM {
 	REAPER_BEDGRAPH( reapr_score_per_base_ch )
 	TABIX_BGZIPTABIX_REAPR( REAPER_BEDGRAPH.out.reapr_per_base_bedgraph )
 
+	BEDTOOLS_SORT( CRAQ.out.regional_aqi_bdg, [])
+	TABIX_BGZIPTABIX_CRAQ( BEDTOOLS_SORT.out.sorted )
+
 	TABIX_BGZIPTABIX( UCSC_BIGWIGTOBEDGRAPH.out.bedgraph )
 
 	TABIX_BGZIPTABIX.out.gz_tbi.filter{ v -> v[1].toString()=~/.*_base.*gz$/ }.map{ meta, bedgraph, bedgraph_tbi -> [['id': meta['id_original']], bedgraph] }.set{bedgraph_filtered_ch}
 	TABIX_BGZIPTABIX.out.gz_tbi.filter{ v -> v[2].toString()=~/.*_base.*gz\.tbi$/ }.map{ meta, bedgraph, bedgraph_tbi -> [['id': meta['id_original']], bedgraph_tbi] }.set{bedgraph_filtered_tbi_ch}
 
-	bedgraph_filtered_ch.view{ "\n--------------\nTEMPLATE TO REPORT: $it \n\n" }
+	// bedgraph_filtered_ch.view{ "\n--------------\nTEMPLATE TO REPORT: $it \n\n" }
 	TABIX_BGZIPTABIX.out.gz_tbi.filter{ v -> v[1].toString()=~/.*_depth.*gz$/ }.map{ meta, bedgraph, bedgraph_tbi -> [['id': meta['id_original']], bedgraph] }.set{bedgraph_filtered_depth_ch}
 	TABIX_BGZIPTABIX.out.gz_tbi.filter{ v -> v[2].toString()=~/.*_depth.*gz\.tbi$/ }.map{ meta, bedgraph, bedgraph_tbi -> [['id': meta['id_original']], bedgraph_tbi] }.set{bedgraph_filtered_depth_tbi_ch}
 
@@ -194,7 +262,10 @@ workflow CORRECTNESS_ASM {
 	TABIX_BGZIPTABIX_REAPR.out.gz_tbi.map{ meta, bedgraph, bedgraph_tbi -> [meta, bedgraph] }.set{bedgraph_filtered_reapr_per_base_ch}
 	TABIX_BGZIPTABIX_REAPR.out.gz_tbi.map{ meta, bedgraph, bedgraph_tbi -> [meta, bedgraph_tbi] }.set{bedgraph_filtered_reapr_per_base_tbi_ch}
 
-	bedgraph_filtered_reapr_per_base_ch.view{ "\n@@@@@@@@@@@@@@@@@@@@@@@@nREAPER BEDGRAPH: $it \n\n" }
+	TABIX_BGZIPTABIX_CRAQ.out.gz_tbi.map{ meta, bedgraph, bedgraph_tbi -> [meta, bedgraph] }.set{bedgraph_filtered_craq_regional_ch}
+	TABIX_BGZIPTABIX_CRAQ.out.gz_tbi.map{ meta, bedgraph, bedgraph_tbi -> [meta, bedgraph_tbi] }.set{bedgraph_filtered_craq_regional_tbi_ch}
+
+	// bedgraph_filtered_reapr_per_base_ch.view{ "\n@@@@@@@@@@@@@@@@@@@@@@@@nREAPER BEDGRAPH: $it \n\n" }
 
 
 	template_track_igv.join(reapr_dir_small_meta_ch).join(bedgraph_filtered_ch)
@@ -202,7 +273,8 @@ workflow CORRECTNESS_ASM {
 		.join(bedgraph_filtered_kmer_ch).join(bedgraph_filtered_place_ch)
 		.join(reapr_bam_small_meta_ch).join(reapr_bai_small_meta_ch)
 		.join(bedgraph_filtered_reapr_per_base_ch)
-		.multiMap{ meta_id, template, reapr_dir, ale_wig_base, ale_wig_depth, ale_wig_insert, ale_wig_kmer, ale_wig_place, reapr_bam, reapr_bai, reapr_score_per_base -> 
+		.join(bedgraph_filtered_craq_regional_ch)
+		.multiMap{ meta_id, template, reapr_dir, ale_wig_base, ale_wig_depth, ale_wig_insert, ale_wig_kmer, ale_wig_place, reapr_bam, reapr_bai, reapr_score_per_base, craq_aqi_bedgraph -> 
 			meta_id: meta_id
 			template: template
 			reapr_dir: reapr_dir
@@ -214,9 +286,10 @@ workflow CORRECTNESS_ASM {
 			reapr_bam: reapr_bam
 			reapr_bai: reapr_bai
 			reapr_score_per_base: reapr_score_per_base
+			craq_aqi_bedgraph: craq_aqi_bedgraph
 		}.set{ template_to_report_ch }
 
-	template_to_report_ch.meta_id.view{ "\n--------------\nTEMPLATE TO REPORT: $it \n\n" }
+	// template_to_report_ch.meta_id.view{ "\n--------------\nTEMPLATE TO REPORT: $it \n\n" }
 	
 
 	PREPARE_REPORT_IGV ( template_to_report_ch.template, template_to_report_ch.meta_id, template_to_report_ch.reapr_bam, template_to_report_ch.reapr_bai,
@@ -237,9 +310,10 @@ workflow CORRECTNESS_ASM {
 	.join(bedgraph_filtered_kmer_tbi_ch)
 	.join(bedgraph_filtered_place_tbi_ch)
 	.join(bedgraph_filtered_reapr_per_base_tbi_ch)
+	.join(bedgraph_filtered_craq_regional_tbi_ch)
 	.multiMap{ meta_id, reapr_failure,
 		 reapr_bam, reapr_bai, ale_wig_base, ale_wig_depth, ale_wig_insert, ale_wig_kmer, ale_wig_place, reaper_score_per_base, asm_fasta, asm_fai, track_config,
-		 bedgraph_filtered_tbi_ch, bedgraph_filtered_depth_tbi_ch, bedgraph_filtered_insert_tbi_ch, bedgraph_filtered_kmer_tbi_ch,  bedgraph_filtered_place_tbi_ch, bedgraph_filtered_reapr_per_base_ch -> 
+		 bedgraph_filtered_tbi_ch, bedgraph_filtered_depth_tbi_ch, bedgraph_filtered_insert_tbi_ch, bedgraph_filtered_kmer_tbi_ch,  bedgraph_filtered_place_tbi_ch, bedgraph_filtered_reapr_per_base_ch, craq_aqi_bedgraph_tbi -> 
 			in_tracks: [meta_id, reapr_failure, [ale_wig_base, ale_wig_depth, ale_wig_insert, ale_wig_kmer, ale_wig_place, reapr_bam, reapr_bai, reaper_score_per_base],[bedgraph_filtered_tbi_ch, bedgraph_filtered_depth_tbi_ch, bedgraph_filtered_insert_tbi_ch, bedgraph_filtered_kmer_tbi_ch,  bedgraph_filtered_place_tbi_ch, bedgraph_filtered_reapr_per_base_ch]]
 			in_fasta: [meta_id, asm_fasta, asm_fai]
 			in_config: [meta_id, track_config]
@@ -248,7 +322,7 @@ workflow CORRECTNESS_ASM {
 
 	IGVREPORTS ( in_tracks_report_ch.in_tracks, in_tracks_report_ch.in_fasta, in_tracks_report_ch.in_config )
 
-	IGVREPORTS.out.report.view{ "\n--------------\n REPORT IGV: $it \n\n" }
+	// IGVREPORTS.out.report.view{ "\n--------------\n REPORT IGV: $it \n\n" }
 
 	reapr_out_ch.mix( REAPR.out.reapr_summary ).set{ reapr_out_ch }
 

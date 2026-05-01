@@ -115,7 +115,7 @@ workflow READ_MAPPING {
 	// joined_asm.view{ "JOINED ASM: $it \n===========================\n" }
 
 	joined_asm.map{ asm_id, asm, bam -> [asm[0], file(bam[1])] }.set{ input_sortable_bam_ch }
-	input_sortable_bam_ch.view{ "INPUT SAMTOOLS SORT: $it \n===========================\n" }
+	// input_sortable_bam_ch.view{ "INPUT SAMTOOLS SORT: $it \n===========================\n" }
 
 	FGBIO_SORTBAM ( input_sortable_bam_ch )
 

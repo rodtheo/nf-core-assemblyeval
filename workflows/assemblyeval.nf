@@ -91,6 +91,10 @@ workflow ASSEMBLYEVAL {
     // ! There is currently no tooling to help you write a sample sheet schema
 
     illumina_ch = PREPARE_INPUT.out.illumina
+
+    longreads_ch = PREPARE_INPUT.out.ont.ifEmpty { PREPARE_INPUT.out.pacbio.ifEmpty { Channel.empty() } }
+
+    // longreads_ch.view{ "*********** LONGREADS CHANNEL: " + it }
     
     // illumina_ch.view{"READS CHANNEL: " + it}
 
@@ -105,7 +109,7 @@ workflow ASSEMBLYEVAL {
     ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]})
     ch_versions = ch_versions.mix(FASTQC.out.versions.first())
      
-    PREPARE_INPUT.out.assemblies.map{ meta, asm -> [meta, asm]}.view{ "OUT ASSEMBLIES: $it" }
+    // PREPARE_INPUT.out.assemblies.map{ meta, asm -> [meta, asm]}.view{ "OUT ASSEMBLIES: $it" }
     //
     // MODULE: Contamination
     //
@@ -115,7 +119,7 @@ workflow ASSEMBLYEVAL {
 
         ch_asm = CONTAMINATION_ASM.out.asms.filter{ it != [] }
 
-        ch_asm.view{ "OUT MIXED: $it" }
+        // ch_asm.view{ "OUT MIXED: $it" }
 
         Channel.fromPath("$projectDir/assets/template_contaminant_mqc.html").combine(CONTAMINATION_ASM.out.fcs).set{ to_jinja_contaminant_ch }
 
@@ -126,7 +130,7 @@ workflow ASSEMBLYEVAL {
         )
 
 
-        JINJA_CONTAMINANT.out.rendered.view{ "================== OUT JINJA CONTAMINANT: $it"}
+        // JINJA_CONTAMINANT.out.rendered.view{ "================== OUT JINJA CONTAMINANT: $it"}
 
         ch_multiqc_files = ch_multiqc_files.mix(JINJA_CONTAMINANT.out.rendered)
     } else {
@@ -161,8 +165,8 @@ workflow ASSEMBLYEVAL {
 
     if (!params.skip_correctness) {
         CORRECTNESS_ASM (
-       READ_MAPPING.out.joined_asm_bam, READ_MAPPING.out.asm, READ_MAPPING.out.bam, READ_MAPPING.out.bai
-    )
+        READ_MAPPING.out.joined_asm_bam, READ_MAPPING.out.asm, READ_MAPPING.out.bam, READ_MAPPING.out.bai, longreads_ch
+        )
     }
     
 
@@ -176,15 +180,21 @@ workflow ASSEMBLYEVAL {
     out_ale_ch = Channel.empty()
     out_reapr_ch = Channel.empty()
     if (!params.skip_correctness) {
-        out_asm_ch = CORRECTNESS_ASM.out.reapr.map{ meta, reapr -> meta['id'] }.collect( sort: true ).view{ "ASSEMBLIES: $it" }
-        out_ale_ch = CORRECTNESS_ASM.out.ale.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }.view{ "ALE: $it" }
-        out_craq_ch = CORRECTNESS_ASM.out.craq.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }.view{ "CRAQ: $it" }
-
-        out_craq_ch.view{ "!!!!!!!!!!!!!!!!!!!!!!!! CRAQ: $it" }
+        out_asm_ch = CORRECTNESS_ASM.out.reapr.map{ meta, reapr -> meta['id'] }.collect( sort: true )
+        // out_asm_ch.view{ "ASSEMBLIES: $it" }
+        out_ale_ch = CORRECTNESS_ASM.out.ale.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
+        // out_ale_ch.view{ "ALE: $it" }
+        out_craq_ch = CORRECTNESS_ASM.out.craq.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().map{it -> 
+            it[1].copyTo(it[1].parent / it[0]['id'] + it[1].name)
+                it[1].parent / it[0]['id'] + it[1].name
+            }.collect{ it }
+        // out_craq_ch.view{ "CRAQ: $it" }
+        // out_craq_ch.view{ "!!!!!!!!!!!!!!!!!!!!!!!! CRAQ: $it" }
         out_reapr_ch = CORRECTNESS_ASM.out.reapr.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().map{it -> 
             it[1].copyTo(it[1].parent / it[0]['id'] + it[1].name)
                 it[1].parent / it[0]['id'] + it[1].name
-            }.collect{ it }.view{ "REAPR: $it" }
+            }.collect{ it }
+            // .view{ "REAPR: $it" }
         // out_reapr_ch = CORRECTNESS_ASM.out.reapr.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
         ch_versions = ch_versions.mix(CORRECTNESS_ASM.out.versions)
     } else {
@@ -192,18 +202,24 @@ workflow ASSEMBLYEVAL {
         out_reapr_ch = out_reapr_ch.mix(Channel.from('[]')).collect{ it[1] }
         out_craq_ch = out_craq_ch.mix(Channel.from('[]')).collect{ it[1] }
     }
-    out_asm_ch = COMPLETENESS_ASM.out.busco_short_summaries_txt.map{ meta, reapr -> meta['id'] }.collect( sort: true ).view{ "ASSEMBLIES: $it" }
+    out_asm_ch = COMPLETENESS_ASM.out.busco_short_summaries_txt.map{ meta, reapr -> meta['id'] }.collect( sort: true )
+    // .view{ "ASSEMBLIES: $it" }
     out_busco_re_summary_ch = COMPLETENESS_ASM.out.busco_short_summaries_txt.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().map{it -> 
             it[1].copyTo(it[1].parent / it[0]['id'] + it[1].name)
                 it[1].parent / it[0]['id'] + it[1].name
-            }.collect{ it }.view{ "BUSCO: $it" }
-    out_quast_ch = CONTIGUITY_ASM.out.quast_tsv.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }.view{ "QUAST: $it" }
-    out_merfin_qv_ch = KMER_PROFILE.out.merfin_logs.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }.view{ "MERFIN QV: $it" }
-    out_merfin_completeness_ch = KMER_PROFILE.out.merfin_completeness.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }.view{ "MERFIN COMPLETENESS: $it" }
+            }.collect{ it }
+            // .view{ "BUSCO: $it" }
+    out_quast_ch = CONTIGUITY_ASM.out.quast_tsv.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
+    // .view{ "QUAST: $it" }
+    out_merfin_qv_ch = KMER_PROFILE.out.merfin_logs.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
+    // .view{ "MERFIN QV: $it" }
+    out_merfin_completeness_ch = KMER_PROFILE.out.merfin_completeness.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
+    // .view{ "MERFIN COMPLETENESS: $it" }
     out_compleasm_ch = COMPLETENESS_ASM.out.compleasm_full_table.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().map{it -> 
             it[1].copyTo(it[1].parent / it[0]['id'] + it[1].name)
                 it[1].parent / it[0]['id'] + it[1].name
-            }.collect{ it }.view{ "COMPLEASM: $it" }
+            }.collect{ it }
+            // .view{ "COMPLEASM: $it" }
 
     // // out_table_ch = Channel.fromPath("out_table.csv")
     

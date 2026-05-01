@@ -99,6 +99,8 @@ workflow PREPARE_INPUT {
                 return [ [ id: record.sample_id, single_end: true ], seqs ]
             ont_ch      : record.datatype.toLowerCase() == 'ont'
                 return [ [ id: record.sample_id, single_end: true ], seqs ]
+            pacbio_ch   : record.datatype.toLowerCase() == 'pacbio'
+                return [ [ id: record.sample_id, single_end: true ], seqs ]
             illumina_ch : record.datatype.toLowerCase() == 'illumina'
                 return [ [ id: record.sample_id, single_end: record.read2 == null ], seqs ]
             rnaseq_ch   : record.datatype.toLowerCase() == 'rnaseq'
@@ -123,6 +125,7 @@ workflow PREPARE_INPUT {
             assembly_ch : ( data.assembly ? [ data.metadata, data.assembly ] : [] )
             hic_ch      : ( data.hic      ? [ data.metadata + [ single_end: false ], data.hic.collect { [ file( it.read1, checkIfExists: true ), file( it.read2, checkIfExists: true ) ] } ] : [] )
             hifi_ch     : ( data.hifi     ? [ data.metadata + [ single_end: true ], data.hifi.collect { file( it.reads, checkIfExists: true ) } ] : [] )
+            pacbio_ch     : ( data.pacbio     ? [ data.metadata + [ single_end: true ], data.pacbio.collect { file( it.reads, checkIfExists: true ) } ] : [] )
             ont_ch      : ( data.ont      ? [ data.metadata + [ single_end: true ], data.ont.collect { file( it.reads, checkIfExists: true ) } ] : [] )
             illumina_ch : ( data.illumina ? [ data.metadata, data.illumina.collect { it.reads ? file( it.reads, checkIfExists: true ) : [ file( it.read1, checkIfExists: true ), file( it.read2, checkIfExists: true ) ] } ] : [] )
             rnaseq_ch   : ( data.rnaseq   ? [ data.metadata, data.rnaseq.collect { it.reads ? file( it.reads, checkIfExists: true ) : [ file( it.read1, checkIfExists: true ), file( it.read2, checkIfExists: true ) ] } ] : [] )
@@ -167,11 +170,17 @@ workflow PREPARE_INPUT {
     //     .mix( tsv_input.hic_ch )
     //     .set { hic_fastx_ch }
 
+    // // Combine PacBio channels
+    yml_input.pacbio_ch.filter { !it.isEmpty() }
+        .transpose()
+        .mix( tsv_input.pacbio_ch )
+        .set { pacbio_fastx_ch }
+
     // // Combine ONT channels
-    // yml_input.ont_ch.filter { !it.isEmpty() }
-    //     .transpose()
-    //     .mix( tsv_input.ont_ch )
-    //     .set { ont_fastx_ch }
+    yml_input.ont_ch.filter { !it.isEmpty() }
+        .transpose()
+        .mix( tsv_input.ont_ch )
+        .set { ont_fastx_ch }
 
     // Combine Illumina channels
     yml_input.illumina_ch.filter { !it.isEmpty() }
@@ -197,7 +206,8 @@ workflow PREPARE_INPUT {
     assemblies = assembly_ch.dump( tag: 'Input: Assemblies' )
     // hic        = hic_fastx_ch.dump( tag: 'Input: Hi-C' )
     // hifi       = hifi_fastx_ch.dump( tag: 'Input: PacBio HiFi' )
-    // ont        = ont_fastx_ch.dump( tag: 'Input: ONT' )
+    pacbio     = pacbio_fastx_ch.dump( tag: 'Input: PacBio' )
+    ont        = ont_fastx_ch.dump( tag: 'Input: ONT' )
     illumina   = illumina_fastx_ch.dump( tag: 'Input: Illumina' )
     // rnaseq     = rnaseq_fastx_ch.dump( tag: 'Input: Illumina RnaSeq' )
     // isoseq     = isoseq_fastx_ch.dump( tag: 'Input: PacBio IsoSeq' )

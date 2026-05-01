@@ -11,3 +11,4 @@ out_*/
 data/
 *.dot
 *.html
+data/*

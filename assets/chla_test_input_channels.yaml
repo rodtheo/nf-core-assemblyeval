@@ -21,3 +21,5 @@ samples:
     illumina:
       - read1: "./data_test/mason_R1_001.fastq.gz"
         read2: "./data_test/mason_R2_001.fastq.gz"
+    ont:
+      - reads: "./data_test/ont_reads_pbsim3.fq.gz"

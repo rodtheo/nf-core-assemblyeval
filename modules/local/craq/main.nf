@@ -10,7 +10,7 @@ process CRAQ {
     input:
     tuple val(meta), path(asm)
     tuple path(bam_shortreads), path(bai)
-    path bam_longreads
+    tuple path(bam_longreads), path(bai_longreads)
     // val mode                              // Required:    One of genome, proteins, or transcriptome
     // val lineage                           // Required:    lineage to check against, "auto" enables --auto-lineage instead
     // path busco_lineages_path              // Recommended: path to busco lineages - downloads if not set
@@ -23,9 +23,10 @@ process CRAQ {
     tuple val(meta), path("*-craq/runAQI_out/locER_out/out_final.CRE.bed"), emit: locER_bed_CRE
     tuple val(meta), path("*-craq/runAQI_out/locER_out/out_final.CRH.bed"), emit: locER_bed_CRH
     tuple val(meta), path("*-craq/runAQI_out/locER_out/ambiguous.RE.RH"), emit: locER_bed_ambiguous
-    tuple val(meta), path("*-craq/runAQI_out/strER_out/out_final.CSE.bed"), emit: strER_bed_CRE
-    tuple val(meta), path("*-craq/runAQI_out/strER_out/out_final.CSH.bed"), emit: strER_bed_CRH
+    tuple val(meta), path("*-craq/runAQI_out/strER_out/out_final.CSE.bed"), emit: strER_bed_CSE
+    tuple val(meta), path("*-craq/runAQI_out/strER_out/out_final.CSH.bed"), emit: strER_bed_CSH
     tuple val(meta), path("*-craq/runAQI_out/strER_out/ambiguous.SE.SH"), emit: strER_bed_ambiguous
+    tuple val(meta), path("*-craq/runAQI_out/out_regional.AQI.bdg"), emit: regional_aqi_bdg
     path "versions.yml", emit: versions
 
     when:
@@ -42,7 +43,7 @@ process CRAQ {
     craq \\
         -g $asm \\
         --thread $task.cpus \\
-        -sms $bam_shortreads \\
+        -ngs $bam_shortreads \\
         $craq_longreads \\
         $args \\
         --output_dir ${prefix}-craq
