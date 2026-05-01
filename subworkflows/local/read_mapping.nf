@@ -3,6 +3,7 @@ include { BOWTIE_BUILD } from '../../modules/nf-core/bowtie/build/main'
 include { BOWTIE_ALIGN } from '../../modules/nf-core/bowtie/align/main'
 include { BWA_INDEX } from '../../modules/nf-core/bwa/index/main'
 include { BWA_MEM } from '../../modules/nf-core/bwa/mem/main'
+include { FGBIO_SORTBAM } from '../../modules/nf-core/fgbio/sortbam/main'
 include { SAMTOOLS_SORT } from '../../modules/nf-core/samtools/sort/main'
 include { SAMTOOLS_INDEX } from '../../modules/nf-core/samtools/index/main'
 
@@ -100,20 +101,54 @@ workflow READ_MAPPING {
 	left = inputs_reads_asm_ch.map{ meta_id, meta_cor_reads, reads, meta_asm, asm -> [meta_asm['id'], [meta_asm, asm]] }
 	// left.view{ "LEEEFT: $it \n---------------------------\n"}
 
+
+
 	right = aligned_reads_ch.map{ meta, bam -> [meta['id'], [meta, bam]] }
 	// right.view{ "RIGHT: $it \n>>>>>>>>>>>>>>>>>>>>>>>>>>>\n"}
 	joined_asm = left.join(right, failOnMismatch: false)
+	
 
 	joined_asm.multiMap{ asm_id, asm, bam ->
-		bam: bam
-		ref: asm }.set{ input_samtools_sort_ch }
+		bam: [bam[0], file(bam[1])]
+		ref: [asm[0], file(asm[1])] }.set{ input_samtools_sort_ch }
 
-	// SAMTOOLS_SORT( input_samtools_sort_ch.bam,  input_samtools_sort_ch.ref )
+	// joined_asm.view{ "JOINED ASM: $it \n===========================\n" }
+
+	joined_asm.map{ asm_id, asm, bam -> [asm[0], file(bam[1])] }.set{ input_sortable_bam_ch }
+	input_sortable_bam_ch.view{ "INPUT SAMTOOLS SORT: $it \n===========================\n" }
+
+	FGBIO_SORTBAM ( input_sortable_bam_ch )
+
+	// SAMTOOLS_SORT( input_samtools_sort_ch.bam, tuple([],[]) )
 
 	// bams_ch.mix( SAMTOOLS_SORT.out.bam )
     //         .set { bams_ch }
 
-	// SAMTOOLS_INDEX( SAMTOOLS_SORT.out.bam )
+	// SAMTOOLS_SORT.out.bam.view{ "SORTED BAM: $it \n===========================\n" }
+
+	SAMTOOLS_INDEX( FGBIO_SORTBAM.out.bam )
+
+	sorted_ch = FGBIO_SORTBAM.out.bam.map{ meta, bam -> [meta['id'], [meta, bam]] }
+
+	joined_asm_with_bai = left.join(sorted_ch, failOnMismatch: false)
+
+	sorted_ch_bai = SAMTOOLS_INDEX.out.bai.map{ meta, bai -> [meta['id'], [meta, bai]] }
+
+	joined_asm_with_bai = joined_asm_with_bai.join(sorted_ch_bai, failOnMismatch: false)
+
+	// aligned_reads_ch.mix( SAMTOOLS_INDEX.out.bai )
+	// 		.set { aligned_reads_ch }
+
+	// right_new = aligned_reads_ch.map{ meta, bam, bai -> [meta['id'], [meta, bam], [meta, bai]] }
+
+	// joined_asm_new = left.join(right_new, failOnMismatch: false)
+
+	// joined_asm_new.multiMap{ asm_id, asm, bam, bai ->
+	// 	bam: bam
+	// 	bai: bai
+	// 	ref: asm }.set{ joined_asm_new_out_ch }
+
+
 
 	// bams_index_ch.mix( SAMTOOLS_INDEX.out.bai )
     //         .set { bams_index_ch }
@@ -122,7 +157,7 @@ workflow READ_MAPPING {
 	joined_asm_bam = joined_asm
 	asm = input_samtools_sort_ch.ref	// queue channel: [ sample_id, file(asm_fasta) ]
     bam = bams_ch   // queue channel: [ sample_id, file(bam_file) ]
-	bai = bams_index_ch // queue channel: [ sample_id, file(bai_file) ]
+	bai = joined_asm_with_bai // queue channel: [ sample_id, file(bai_file) ]
 	versions = versions_ch
 
 }

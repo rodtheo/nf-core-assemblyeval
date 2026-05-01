@@ -14,13 +14,14 @@ process PARSE_RESULTS {
     // ... ]
     input:
     val meta
-    val ale_res
-    val reapr_res
-    val busco_re_summary
-    val quast_res
-    val merfin_qv_res
-    val merfin_completeness_res
-    val compleasm_table
+    path ale_res
+    path reapr_res
+    path busco_re_summary
+    path quast_res
+    path merfin_qv_res
+    path merfin_completeness_res
+    path compleasm_table
+    path craq_res
 
     output:
     tuple val(meta), path('table_data_mqc.out'), emit: res

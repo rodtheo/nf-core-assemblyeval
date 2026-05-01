@@ -10,6 +10,7 @@ include { PREPARE_REPORT_IGV } from '../../modules/local/prepare_report_igv'
 include { SUBSET_REAPR } from '../../modules/local/subset_reapr'
 include { TABIX_BGZIPTABIX as TABIX_BGZIPTABIX; TABIX_BGZIPTABIX as TABIX_BGZIPTABIX_REAPR } from '../../modules/nf-core/tabix/bgziptabix/main'
 include { REAPER_BEDGRAPH } from '../../modules/local/REAPR_BEDGRAPH'
+include { CRAQ } from '../../modules/local/craq/main'
 
 workflow CORRECTNESS_ASM { 
 
@@ -56,6 +57,21 @@ workflow CORRECTNESS_ASM {
 	ALE ( input_ale_ch )
 
 	ale_out_ch.mix(ALE.out.ale).set{ ale_out_ch }
+
+	bai.view{ "\n\n %%%%%%%%%%%%%% BAI: $it\n\n" }
+
+	bai.multiMap{ meta_id, asm, bam, bai ->
+		asm: [['id': meta_id], asm[1]]
+		bam_shortreads: [bam[1], bai[1]] }.set{ input_craq_ch }
+
+	Channel.empty()
+        .set { craq_out_ch }
+	
+	CRAQ ( input_craq_ch.asm, input_craq_ch.bam_shortreads, [] )
+
+	craq_out_ch.mix(CRAQ.out.summary_report).set{ craq_out_ch }
+
+	craq_out_ch.view{ "\n&&&&&&&&&&&&&&&&&&&&&\nCRAQ OUT: $it \n\n" }
 
 	Channel.empty()
         .set { reapr_out_ch }
@@ -265,6 +281,7 @@ workflow CORRECTNESS_ASM {
     emit:
     ale = ale_out_ch   // queue channel: [ sample_id, file(bam_file) ]
 	reapr = reapr_out_ch
+	craq = craq_out_ch
 	igv_report = igv_report_out_ch
-	versions = REAPR.out.versions.mix(ALE.out.versions)
+	versions = REAPR.out.versions.mix(ALE.out.versions).mix(CRAQ.out.versions)
 }

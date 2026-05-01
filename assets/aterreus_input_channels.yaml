@@ -7,20 +7,74 @@ samples:
       organism_domain: euk
       taxid: "33178" 
       busco_lineages:
-        - "fungi_odb10"
+        - "fungi_odb12"
     assembly:
       - id: canu
-        pri_asm: "/home/rodtheo/Bioinfo/project-data/2019-02-28-AterreusAssembly/assemblies/canu.fasta"
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/assemblies/canu.fasta"
       - id: canupolished
-        pri_asm: "/home/rodtheo/Bioinfo/project-data/2019-02-28-AterreusAssembly/assemblies/canu_polished.fasta"
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/assemblies/canu_polished.fasta"
       - id: spades
-        pri_asm: "/home/rodtheo/Bioinfo/project-data/2019-02-28-AterreusAssembly/assemblies/spades.fasta"
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/assemblies/spades.fasta"
       - id: unicycler
-        pri_asm: "/home/rodtheo/Bioinfo/project-data/2019-02-28-AterreusAssembly/assemblies/unicycler.fasta"
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/assemblies/unicycler.fasta"
       - id: unicyclerpolished
-        pri_asm: "/home/rodtheo/Bioinfo/project-data/2019-02-28-AterreusAssembly/assemblies/unicycler_polished.fasta"
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/assemblies/unicycler_polished.fasta"
       - id: canupolishedcleaned
-        pri_asm: "/home/rodtheo/Bioinfo/project-data/2019-02-28-AterreusAssembly/assemblies/canu_polished_cleaned.fasta"
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/assemblies/canu_polished_cleaned.fasta"
+      - id: hifiasm_ont
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/AterreusATCC_hifism_ont.cor.p_ctg.fasta"
+      - id: hifiasm_ont_polished_medaka
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/medaka_hifiasm_ont/medaka/consensus.fasta"
+      - id: hifiasm_ont_polished_medaka_polca_5x_01round
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/nextpolish_run/pypolca_results_5x_redo_1x/pypolca_corrected.fasta"
+      - id: hifiasm_ont_polished_medaka_polca_5x_02round
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/nextpolish_run/pypolca_results_5x_redo_2x/pypolca_corrected.fasta"
+      - id: hifiasm_ont_polished_medaka_polca_5x_03round
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/nextpolish_run/pypolca_results_5x_redo_3x/pypolca_corrected.fasta"
+      - id: hifiasm_ont_polished_medaka_polca_5x_04round
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/nextpolish_run/pypolca_results_5x_redo_4x/pypolca_corrected.fasta"
+      - id: hifiasm_ont_polished_medaka_polca_10x_01round
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/nextpolish_run/pypolca_results_10x_redo_1x/pypolca_corrected.fasta"
+      - id: hifiasm_ont_polished_medaka_polca_10x_02round
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/nextpolish_run/pypolca_results_10x_redo_2x/pypolca_corrected.fasta"
+      - id: hifiasm_ont_polished_medaka_polca_10x_03round
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/nextpolish_run/pypolca_results_10x_redo_3x/pypolca_corrected.fasta"
+      - id: hifiasm_ont_polished_medaka_polca_10x_04round
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/nextpolish_run/pypolca_results_10x_redo_4x/pypolca_corrected.fasta"
+      - id: hifiasm_ont_polished_medaka_polca_30x_01round
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/nextpolish_run/pypolca_results_30x_redo_1x/pypolca_corrected.fasta"
+      - id: hifiasm_ont_polished_medaka_polca_30x_02round
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/nextpolish_run/pypolca_results_30x_redo_2x/pypolca_corrected.fasta"
+      - id: hifiasm_ont_polished_medaka_polca_30x_03round
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/nextpolish_run/pypolca_results_30x_redo_3x/pypolca_corrected.fasta"
+      - id: hifiasm_ont_polished_medaka_polca_30x_04round
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/nextpolish_run/pypolca_results_30x_redo_4x/pypolca_corrected.fasta"
+      - id: hifiasm_ont_polished_medaka_polca_15x_01round
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/nextpolish_run/pypolca_results_15x_redo_1x/pypolca_corrected.fasta"
+      - id: hifiasm_ont_polished_medaka_polca_15x_02round
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/nextpolish_run/pypolca_results_15x_redo_2x/pypolca_corrected.fasta"
+      - id: hifiasm_ont_polished_medaka_polca_15x_03round
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/nextpolish_run/pypolca_results_15x_redo_3x/pypolca_corrected.fasta"
+      - id: hifiasm_ont_polished_medaka_polca_15x_04round
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/nextpolish_run/pypolca_results_15x_redo_4x/pypolca_corrected.fasta"
+      - id: hifiasm_ont_polished_medaka_polca_20x_01round
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/nextpolish_run/pypolca_results_20x_redo_1x/pypolca_corrected.fasta"
+      - id: hifiasm_ont_polished_medaka_polca_20x_02round
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/nextpolish_run/pypolca_results_20x_redo_2x/pypolca_corrected.fasta"
+      - id: hifiasm_ont_polished_medaka_polca_20x_03round
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/nextpolish_run/pypolca_results_20x_redo_3x/pypolca_corrected.fasta"
+      - id: hifiasm_ont_polished_medaka_polca_20x_04round
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/nextpolish_run/pypolca_results_20x_redo_4x/pypolca_corrected.fasta"
+      - id: hifiasm_ont_polished_medaka_polca_25x_01round
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/nextpolish_run/pypolca_results_25x_redo_1x/pypolca_corrected.fasta"
+      - id: hifiasm_ont_polished_medaka_polca_25x_02round
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/nextpolish_run/pypolca_results_25x_redo_2x/pypolca_corrected.fasta"
+      - id: hifiasm_ont_polished_medaka_polca_25x_03round
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/nextpolish_run/pypolca_results_25x_redo_3x/pypolca_corrected.fasta"
+      - id: hifiasm_ont_polished_medaka_polca_25x_04round
+        pri_asm: "/home/admin-compgen/Bioinfo/Aterreus/nextpolish_run/pypolca_results_25x_redo_4x/pypolca_corrected.fasta"
+      - id: asm_boruta
+        pri_asm: "/media/admin-compgen/Data_Volume/Data/ATERREUS/ncbi_asm_aterreus/genomes/GCA_016808415.1_ASM1680841v1_genomic.fasta"
     illumina:
-      - read1: "/home/rodtheo/Bioinfo/project-data/2019-02-28-AterreusAssembly/data/ATCC.1.fastq.gz"
-        read2: "/home/rodtheo/Bioinfo/project-data/2019-02-28-AterreusAssembly/data/ATCC.2.fastq.gz"
+      - read1: "/home/admin-compgen/Bioinfo/Aterreus/assemblies/ATCC.1.trimmed.paired.fq.gz"
+        read2: "/home/admin-compgen/Bioinfo/Aterreus/assemblies/ATCC.2.trimmed.paired.fq.gz"

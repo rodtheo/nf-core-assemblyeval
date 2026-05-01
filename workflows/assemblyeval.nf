@@ -177,25 +177,39 @@ workflow ASSEMBLYEVAL {
     out_reapr_ch = Channel.empty()
     if (!params.skip_correctness) {
         out_asm_ch = CORRECTNESS_ASM.out.reapr.map{ meta, reapr -> meta['id'] }.collect( sort: true ).view{ "ASSEMBLIES: $it" }
-        out_ale_ch = CORRECTNESS_ASM.out.ale.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
-        out_reapr_ch = CORRECTNESS_ASM.out.reapr.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
+        out_ale_ch = CORRECTNESS_ASM.out.ale.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }.view{ "ALE: $it" }
+        out_craq_ch = CORRECTNESS_ASM.out.craq.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }.view{ "CRAQ: $it" }
+
+        out_craq_ch.view{ "!!!!!!!!!!!!!!!!!!!!!!!! CRAQ: $it" }
+        out_reapr_ch = CORRECTNESS_ASM.out.reapr.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().map{it -> 
+            it[1].copyTo(it[1].parent / it[0]['id'] + it[1].name)
+                it[1].parent / it[0]['id'] + it[1].name
+            }.collect{ it }.view{ "REAPR: $it" }
+        // out_reapr_ch = CORRECTNESS_ASM.out.reapr.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
         ch_versions = ch_versions.mix(CORRECTNESS_ASM.out.versions)
     } else {
         out_ale_ch = out_ale_ch.mix(Channel.from('[]')).collect{ it[1] }
         out_reapr_ch = out_reapr_ch.mix(Channel.from('[]')).collect{ it[1] }
+        out_craq_ch = out_craq_ch.mix(Channel.from('[]')).collect{ it[1] }
     }
     out_asm_ch = COMPLETENESS_ASM.out.busco_short_summaries_txt.map{ meta, reapr -> meta['id'] }.collect( sort: true ).view{ "ASSEMBLIES: $it" }
-    out_busco_re_summary_ch = COMPLETENESS_ASM.out.busco_short_summaries_txt.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
-    out_quast_ch = CONTIGUITY_ASM.out.quast_tsv.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
-    out_merfin_qv_ch = KMER_PROFILE.out.merfin_logs.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
-    out_merfin_completeness_ch = KMER_PROFILE.out.merfin_completeness.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
-    out_compleasm_ch = COMPLETENESS_ASM.out.compleasm_full_table.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }
+    out_busco_re_summary_ch = COMPLETENESS_ASM.out.busco_short_summaries_txt.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().map{it -> 
+            it[1].copyTo(it[1].parent / it[0]['id'] + it[1].name)
+                it[1].parent / it[0]['id'] + it[1].name
+            }.collect{ it }.view{ "BUSCO: $it" }
+    out_quast_ch = CONTIGUITY_ASM.out.quast_tsv.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }.view{ "QUAST: $it" }
+    out_merfin_qv_ch = KMER_PROFILE.out.merfin_logs.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }.view{ "MERFIN QV: $it" }
+    out_merfin_completeness_ch = KMER_PROFILE.out.merfin_completeness.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().collect{ it[1] }.view{ "MERFIN COMPLETENESS: $it" }
+    out_compleasm_ch = COMPLETENESS_ASM.out.compleasm_full_table.toSortedList( { a, b -> a[0]['id'] <=> b[0]['id'] } ).flatMap().map{it -> 
+            it[1].copyTo(it[1].parent / it[0]['id'] + it[1].name)
+                it[1].parent / it[0]['id'] + it[1].name
+            }.collect{ it }.view{ "COMPLEASM: $it" }
 
     // // out_table_ch = Channel.fromPath("out_table.csv")
     
     // COMPLETENESS_ASM.out.busco_short_summaries_txt.view{ "REAPR: $it" }
     
-    PARSE_RESULTS ( out_asm_ch, out_ale_ch, out_reapr_ch, out_busco_re_summary_ch, out_quast_ch, out_merfin_qv_ch, out_merfin_completeness_ch, out_compleasm_ch  )
+    PARSE_RESULTS ( out_asm_ch, out_ale_ch, out_reapr_ch, out_busco_re_summary_ch, out_quast_ch, out_merfin_qv_ch, out_merfin_completeness_ch, out_compleasm_ch, out_craq_ch )
     // PARSE_RESULTS.out.res.view{ "\n\nRESULTS ARE IN: $it"}
 
     // // // CORRECTNESS_ASM.out.reapr.collect( {it[1]}, sort: {it.getName()} ).set{ new_collect }
