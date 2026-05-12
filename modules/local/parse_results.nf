@@ -44,6 +44,7 @@ process PARSE_RESULTS {
         --merfin_qv_res "$merfin_qv_res" \\
         --merfin_comp_res "$merfin_completeness_res" \\
         --compleasm_table "$compleasm_table" \\
+        --craq_aqi_bedgraph "$craq_res" \\
         -f table_data_mqc.out
 
     cat <<-END_VERSIONS > versions.yml

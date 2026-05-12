@@ -201,8 +201,10 @@ workflow CORRECTNESS_ASM {
 
 	REAPR.out.reapr_score_errors.map{ meta, scoreerrors -> [meta['id'], meta, scoreerrors] }.set{ ch_reapr_score_to_join }
 
-	ch_reapr_score_to_join.join(craq_beds_ch, by: 0).multiMap{ meta_id, meta, scoreerrors, strER_CSE, strER_CSH, locER_CRE, locER_CRH -> 
-		reapr_scores: [meta, scoreerrors]
+	CUSTOM_GETCHROMSIZES.out.sizes.map{ meta, sizes -> [meta['id'], sizes] }.set{ ch_chr_sizes_to_join }
+
+	ch_reapr_score_to_join.join(ch_chr_sizes_to_join).join(craq_beds_ch, by: 0).multiMap{ meta_id, meta, scoreerrors, chr_sizes,strER_CSE, strER_CSH, locER_CRE, locER_CRH -> 
+		reapr_scores: [meta, scoreerrors, chr_sizes]
 		craq_beds: [meta, strER_CSE, strER_CSH, locER_CRE, locER_CRH] }.set{ reapr_score_craq_ch }
 
 	SUBSET_REAPR( reapr_score_craq_ch.reapr_scores, reapr_score_craq_ch.craq_beds )
@@ -267,6 +269,10 @@ workflow CORRECTNESS_ASM {
 
 	// bedgraph_filtered_reapr_per_base_ch.view{ "\n@@@@@@@@@@@@@@@@@@@@@@@@nREAPER BEDGRAPH: $it \n\n" }
 
+	// template_track_igv.view{ "\n--------------\nTEMPLATE TRACK IGV: $it \n\n"}
+	// bedgraph_filtered_craq_regional_ch.view{ "\n--------------\nCRAQ BEDGRAPH: $it \n\n" }
+
+	// template_track_igv.join(bedgraph_filtered_craq_regional_ch).view{ "\n--------------\nTEMPLATE TRACK IGV JOINED WITH CRAQ: $it \n\n" }
 
 	template_track_igv.join(reapr_dir_small_meta_ch).join(bedgraph_filtered_ch)
 		.join(bedgraph_filtered_depth_ch).join(bedgraph_filtered_insert_ch)
@@ -289,13 +295,13 @@ workflow CORRECTNESS_ASM {
 			craq_aqi_bedgraph: craq_aqi_bedgraph
 		}.set{ template_to_report_ch }
 
-	// template_to_report_ch.meta_id.view{ "\n--------------\nTEMPLATE TO REPORT: $it \n\n" }
+	// template_to_report_ch.craq_aqi_bedgraph.view{ "\n--------------\nTEMPLATE TO REPORT: $it \n\n" }
 	
 
 	PREPARE_REPORT_IGV ( template_to_report_ch.template, template_to_report_ch.meta_id, template_to_report_ch.reapr_bam, template_to_report_ch.reapr_bai,
 	template_to_report_ch.ale_wig_base, template_to_report_ch.ale_wig_depth,
 	template_to_report_ch.ale_wig_insert, template_to_report_ch.ale_wig_kmer,
-	template_to_report_ch.ale_wig_place, template_to_report_ch.reapr_score_per_base )
+	template_to_report_ch.ale_wig_place, template_to_report_ch.reapr_score_per_base, template_to_report_ch.craq_aqi_bedgraph )
 
 	// PREPARE_REPORT_IGV.out.view{ "\n--------------\nPREPARE REPORT IGV: $it \n\n"}
 	SUBSET_REAPR.out.reaper_bed_failure.map{ meta_complete, reapr_failure -> [['id': meta_complete['id']], reapr_failure]}.set{ reapr_failure_small_meta_ch }
@@ -312,9 +318,9 @@ workflow CORRECTNESS_ASM {
 	.join(bedgraph_filtered_reapr_per_base_tbi_ch)
 	.join(bedgraph_filtered_craq_regional_tbi_ch)
 	.multiMap{ meta_id, reapr_failure,
-		 reapr_bam, reapr_bai, ale_wig_base, ale_wig_depth, ale_wig_insert, ale_wig_kmer, ale_wig_place, reaper_score_per_base, asm_fasta, asm_fai, track_config,
+		 reapr_bam, reapr_bai, ale_wig_base, ale_wig_depth, ale_wig_insert, ale_wig_kmer, ale_wig_place, reaper_score_per_base, craq_aqi_bedgraph, asm_fasta, asm_fai, track_config,
 		 bedgraph_filtered_tbi_ch, bedgraph_filtered_depth_tbi_ch, bedgraph_filtered_insert_tbi_ch, bedgraph_filtered_kmer_tbi_ch,  bedgraph_filtered_place_tbi_ch, bedgraph_filtered_reapr_per_base_ch, craq_aqi_bedgraph_tbi -> 
-			in_tracks: [meta_id, reapr_failure, [ale_wig_base, ale_wig_depth, ale_wig_insert, ale_wig_kmer, ale_wig_place, reapr_bam, reapr_bai, reaper_score_per_base],[bedgraph_filtered_tbi_ch, bedgraph_filtered_depth_tbi_ch, bedgraph_filtered_insert_tbi_ch, bedgraph_filtered_kmer_tbi_ch,  bedgraph_filtered_place_tbi_ch, bedgraph_filtered_reapr_per_base_ch]]
+			in_tracks: [meta_id, reapr_failure, [ale_wig_base, ale_wig_depth, ale_wig_insert, ale_wig_kmer, ale_wig_place, reapr_bam, reapr_bai, reaper_score_per_base, craq_aqi_bedgraph],[bedgraph_filtered_tbi_ch, bedgraph_filtered_depth_tbi_ch, bedgraph_filtered_insert_tbi_ch, bedgraph_filtered_kmer_tbi_ch,  bedgraph_filtered_place_tbi_ch, bedgraph_filtered_reapr_per_base_ch,craq_aqi_bedgraph_tbi]]
 			in_fasta: [meta_id, asm_fasta, asm_fai]
 			in_config: [meta_id, track_config]
 	}.set{ in_tracks_report_ch }

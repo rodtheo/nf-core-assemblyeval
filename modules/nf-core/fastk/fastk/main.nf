@@ -1,6 +1,6 @@
 process FASTK_FASTK {
     tag "$meta.id"
-    label 'process_medium'
+    label 'process_high'
 
     // WARN: Version information not provided by tool on CLI. Please update version string below when bumping container versions.
     container 'ghcr.io/nbisweden/fastk_genescopefk_merquryfk:1.2'

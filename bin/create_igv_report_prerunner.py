@@ -26,7 +26,9 @@ def main():
 
 	reapr_score_per_base = sys.argv[9]
 
-	file_out = sys.argv[10]
+	craq_aqi_bedgraph = sys.argv[10]
+
+	file_out = sys.argv[11]
 
 	env = Environment(loader=FileSystemLoader(searchpath=path_base))
 	# env = Environment(loader=PackageLoader('app', 'templates'))
@@ -43,7 +45,8 @@ def main():
 		'ale_wig_insert': ale_wig_insert,
 		'ale_wig_kmer': ale_wig_kmer,
 		'ale_wig_place': ale_wig_place,
-		'reapr_score_per_base': reapr_score_per_base
+		'reapr_score_per_base': reapr_score_per_base,
+		'craq_aqi_bedgraph': craq_aqi_bedgraph
 	}
 
 	# print(template.render(page=page))

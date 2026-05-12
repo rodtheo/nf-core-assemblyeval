@@ -10,7 +10,7 @@ process SUBSET_REAPR {
         'quay.io/biocontainers/bedtools:2.31.1--h13024bc_3' }"
 
     input:
-    tuple val(meta), path(scoreerrors)
+    tuple val(meta), path(scoreerrors), path(chr_sizes)
     tuple val(meta2), path(strER_CSE_bed), path(strER_CSH_bed), path(locER_CRE_bed), path(locER_CRH_bed)
 
     output:
@@ -32,7 +32,13 @@ process SUBSET_REAPR {
 
     cat ${prefix}_reaper_base.bed ${prefix}_craq.bed | awk -F"\t" '{print \$1"\t"\$2-1"\t"\$3"\t"\$4}' > ${prefix}_reaper_failure_unsorted.bed
 
-    bedtools sort -i ${prefix}_reaper_failure_unsorted.bed > ${prefix}_reaper_failure.bed
+    bedtools sort -i ${prefix}_reaper_failure_unsorted.bed > ${prefix}_reaper_failure_unmerged.bed
+
+    bedtools merge -i ${prefix}_reaper_failure_unmerged.bed -c 4,1 -o collapse,count -delim "|" > ${prefix}_reaper_failure_startend.bed
+
+    awk -F"\t" '{print \$1"\t"0"\t"10; print \$1"\t"\$2-10"\t"\$2}' $chr_sizes | bedtools sort -i - > ${prefix}_chr_sizes.bed
+
+    bedtools intersect -a ${prefix}_reaper_failure_startend.bed -b ${prefix}_chr_sizes.bed -v > ${prefix}_reaper_failure.bed
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

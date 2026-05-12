@@ -12,3 +12,4 @@ data/
 *.dot
 *.html
 data/*
+data_test/*

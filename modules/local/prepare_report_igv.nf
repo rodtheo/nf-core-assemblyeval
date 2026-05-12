@@ -18,11 +18,12 @@ process PREPARE_REPORT_IGV {
     path(ale_wig_kmer)
     path(ale_wig_place)
     path(reapr_score_per_base)
+    path(craq_aqi_bedgraph)
 
 
     output:
     tuple val(meta), path('*-track-config.json'), emit: track_config
-    tuple val(meta), path(reapr_bam), path(reapr_bai), path(ale_wig_base), path(ale_wig_depth), path(ale_wig_insert), path(ale_wig_kmer), path(ale_wig_place), path(reapr_score_per_base), emit: track_files
+    tuple val(meta), path(reapr_bam), path(reapr_bai), path(ale_wig_base), path(ale_wig_depth), path(ale_wig_insert), path(ale_wig_kmer), path(ale_wig_place), path(reapr_score_per_base), path(craq_aqi_bedgraph), emit: track_files
     // path "versions.yml", emit: versions
 
     when:
@@ -42,6 +43,7 @@ process PREPARE_REPORT_IGV {
     $ale_wig_kmer \\
     $ale_wig_place \\
     $reapr_score_per_base \\
+    $craq_aqi_bedgraph \\
     ${prefix}-track-config.json
     """
 }

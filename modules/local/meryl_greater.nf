@@ -20,12 +20,13 @@ process MERYL_GREATER_THAN {
     script:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
+    def cutoff_kmer_count = task.ext.cutoff_kmer_count ?: 1
     """
-        meryl greater-than 1\\
+        meryl greater-than $cutoff_kmer_count\\
             threads=$task.cpus \\
             $args \\
             $in_meryl_db \\
-            output ${prefix}.gt1.meryl
+            output ${prefix}.gt${cutoff_kmer_count}.meryl
 
 
     cat <<-END_VERSIONS > versions.yml

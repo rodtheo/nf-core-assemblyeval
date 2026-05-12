@@ -119,7 +119,7 @@ def parse_compleasm(out_short_summary, compleasm_table):
 
     return(dict_busco)
 
-def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, quast_res, file_out, busco, merfin_qv_res, merfin_comp_res, compleasm_table):
+def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, quast_res, file_out, busco, merfin_qv_res, merfin_comp_res, compleasm_table, craq_aqi_bedgraph):
                 # [ ...
                 # [ sample_id, [ ale_res ], [reapr_res], [busco_re_summary], [quast_res]],
                 # [ sample_id_B, [ ale_res_B ], [reapr_res_B], [busco_re_summary_B], [quast_res_B]]
@@ -139,6 +139,7 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
         my_list_quast = [item.strip() for item in quast_res.split(' ')]
         my_merfin_qv_file = [item.strip() for item in merfin_qv_res.split(' ')]
         my_merfin_completeness_file = [item.strip() for item in merfin_comp_res.split(' ')]
+        my_craq_file = [item.strip() for item in craq_aqi_bedgraph.split(' ')]
         for idx, pseudo_samp in enumerate(my_list):
                 # samp = pseudo_samp.split("/")[-1]
                 samp = pseudo_samp
@@ -170,7 +171,8 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
                     ale_file = my_list_ale[idx]
                     if Path(ale_file).exists():
                         with open(ale_file) as infreapr:
-                                for line in infreapr.readlines():
+                                # for line in infreapr.readlines():
+                                for line in infreapr:
                                         match_score = re.match(r'#\sALE_score:\s(-\d+.\d+)', line)
                                         if match_score:
                                             ale_score = float(match_score.group(1))
@@ -181,17 +183,32 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
                 merfin_file_completeness = my_merfin_completeness_file[idx]
                 if Path(merfin_file_completeness).exists():
                     with open(merfin_file_completeness) as infmc:
-                            for line in infmc.readlines():
+                            # for line in infmc.readlines():
+                            for line in infmc:
                                     match_comp = re.match(r'^COMPLETENESS:\s+(\S+)$', line)
                                     if match_comp:
                                             comp_score = float(match_comp.group(1))
                                             dict_sample['merfin_completeness'] = float(comp_score)*100
 
+                # PARSE CRAQ RESULTS
+                craq_report = my_craq_file[idx]
+                if Path(craq_report).exists():
+                    with open(f"{craq_report}", "r") as craq_report_content:
+                        # for line in craq_report_content.readlines():
+                        for line in craq_report_content:
+                            if line.startswith("Genome\t"):
+                                fields = line.split("\t")
+                                cre = re.search(r"\(([^)]+)\)", fields[5]).group(1)
+                                cse = re.search(r"\(([^)]+)\)", fields[6]).group(1)
+                                dict_sample['R-AQI'] = float(cre)
+                                dict_sample['S-AQI'] = float(cse)
+
                 # MATCH MERFIN RESULTS - QV*
                 merfin_file_qv = my_merfin_qv_file[idx]
                 if Path(merfin_file_qv).exists():
                     with open(merfin_file_qv) as infmc:
-                            for line in infmc.readlines():
+                            # for line in infmc.readlines():
+                            for line in infmc:
                                     match_comp = re.match(r'^Merfin\sQV\*:\s(\S+)$', line)
                                     if match_comp:
                                             qv_score = float(match_comp.group(1))
@@ -210,7 +227,8 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
                     reapr_file = my_list_reapr[idx]
                     if Path(reapr_file).exists():
                         with open(reapr_file) as infreapr:
-                                for line in infreapr.readlines():
+                                # for line in infreapr.readlines():
+                                for line in infreapr:
                                         match_percentage_errors = re.match(r'Error free bases:\s(\d+\.\d+)%', line)
                                         if match_percentage_errors:
                                                 reapr_percentage_errors = match_percentage_errors.group(1)
@@ -354,6 +372,7 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
                 'merfin_completeness': 'Merfin Completness','merfin_qv_ast': 'Merfin QV*', 'pct_frameshift': 'Genes with Frameshift (%)', 'n_frameshift': 'Genes with Frameshift (N)'}
             c.rename(columns=dict_names, inplace=True)
         # c.to_excel("evaluate_assembly/results.xlsx", index=False)
+        
 
         c.to_csv(file_out, index=False, sep="\t")
 
@@ -389,6 +408,8 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
         score = np.mean(np.concatenate((scaler_df, scaler_sb_df), axis=1), axis=1)*100
 
         data_read['Score'] = score
+
+        data_read = data_read.drop(columns=["Error-free bases (%)", "REAPR erros", "REAPR low"])
 
         data_read.to_csv(file_out, index=False, sep="\t")
 
@@ -466,6 +487,14 @@ def parse_args(argv=None):
     )
 
     parser.add_argument(
+        "--craq_aqi_bedgraph",
+        # nargs='+',
+        metavar="craq_aqi_bedgraph",
+        # type=Path,
+        help="Craq output report.",
+    )
+
+    parser.add_argument(
         "-q",
         "--quast_res",
         # nargs='+',
@@ -536,7 +565,7 @@ def main(argv=None):
     args.file_out.parent.mkdir(parents=True, exist_ok=True)
     # check_fasta(args.file_in, args.file_out)
     print(args)
-    parse_results_to_table(args.genomes_ids, args.ale_res, args.reapr_res, args.busco_re_summary, args.quast_res, args.file_out, args.busco, args.merfin_qv_res, args.merfin_comp_res, args.compleasm_table)
+    parse_results_to_table(args.genomes_ids, args.ale_res, args.reapr_res, args.busco_re_summary, args.quast_res, args.file_out, args.busco, args.merfin_qv_res, args.merfin_comp_res, args.compleasm_table, args.craq_aqi_bedgraph)
 
 
 if __name__ == "__main__":
