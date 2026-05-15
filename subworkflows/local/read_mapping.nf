@@ -6,6 +6,8 @@ include { BWA_MEM } from '../../modules/nf-core/bwa/mem/main'
 include { FGBIO_SORTBAM } from '../../modules/nf-core/fgbio/sortbam/main'
 include { SAMTOOLS_SORT } from '../../modules/nf-core/samtools/sort/main'
 include { SAMTOOLS_INDEX } from '../../modules/nf-core/samtools/index/main'
+include { BWAMEM2_INDEX } from '../../modules/nf-core/bwamem2/index/main'
+include { BWAMEM2_MEM } from '../../modules/nf-core/bwamem2/mem/main'
 
 
 
@@ -64,13 +66,13 @@ workflow READ_MAPPING {
         //     .set { aligned_reads_ch }
     } else if ( params.aligner == 'bwa' ) {
 		inputs_reads_asm_ch.map{ meta_id, meta_cor_reads, reads, meta_asm, asm -> [ meta_asm, asm ] }.set{ reference_bwa_ch }
-        BWA_INDEX ( reference_bwa_ch )
+        BWAMEM2_INDEX ( reference_bwa_ch )
 
-		versions_ch.mix(BWA_INDEX.out.versions).set{ versions_ch }
+		// versions_ch.mix(BWAMEM2_INDEX.out.versions_bwamem2).set{ versions_ch }
 		// reference_bwa_ch.view{ "ASSEMBLIES IDX: $it" }
 		// inputs_reads_asm_ch.map{ meta_cor_reads, reads, meta_asm, asm -> [ meta_cor_reads, reads ] }.set{ reads_ch_cor_meta }
 		// inputs_reads_asm_ch.map{ meta_cor_reads, reads, meta_asm, asm -> [ meta_asm, asm ] }.set{ asm_ch }
-		bwa_index_ch = BWA_INDEX.out.index.map{ meta, asm_idx -> [meta['id'], meta, asm_idx]}
+		bwa_index_ch = BWAMEM2_INDEX.out.index.map{ meta, asm_idx -> [meta['id'], meta, asm_idx]}
 		bwa_index_ch.join(inputs_reads_asm_ch).multiMap { meta_id, meta, asm_idx, meta_cor_reads, reads, meta_asm, asm -> 
 			reads: [meta_cor_reads, reads]
 			idx: [meta, asm_idx]
@@ -81,11 +83,11 @@ workflow READ_MAPPING {
 		// bwa_inputs_joined.idx.view{ "BWA - IDX: $it" }
 		// bwa_inputs_joined.asm.view{ "BWA - ASM: $it" }
 		// bwa_inputs_joined.sort.view{ "BWA - SORT: $it" }
-        BWA_MEM ( bwa_inputs_joined.reads, bwa_inputs_joined.idx, bwa_inputs_joined.asm, bwa_inputs_joined.sort )
-		versions_ch.mix(BWA_MEM.out.versions).set{ versions_ch }
+        BWAMEM2_MEM ( bwa_inputs_joined.reads, bwa_inputs_joined.idx, bwa_inputs_joined.asm, bwa_inputs_joined.sort )
+		// versions_ch.mix(BWAMEM2_MEM.out.versions_bwamem2).set{ versions_ch }
 
 
-		aligned_reads_ch.mix( BWA_MEM.out.bam )
+		aligned_reads_ch.mix( BWAMEM2_MEM.out.bam )
             .set { aligned_reads_ch }
     }
     // aligned_reads_ch.view{"ALIGNED READS: $it"}
@@ -158,6 +160,7 @@ workflow READ_MAPPING {
 	asm = input_samtools_sort_ch.ref	// queue channel: [ sample_id, file(asm_fasta) ]
     bam = bams_ch   // queue channel: [ sample_id, file(bam_file) ]
 	bai = joined_asm_with_bai // queue channel: [ sample_id, file(bai_file) ]
+	shortreads_ch = inputs_reads_asm_ch
 	versions = versions_ch
 
 }

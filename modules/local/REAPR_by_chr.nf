@@ -1,4 +1,4 @@
-process REAPR {
+process REAPR_BY_CHR {
     tag "$meta.id"
     label 'process_high'
 
@@ -13,8 +13,9 @@ process REAPR {
         
 
     input:
-    tuple val(meta), path(asm), path(bam)       // Required:    One genome assembly to evaluate path(bam)            // Required:    Corresponding aligned file
-    
+    tuple val(meta), path(asm_chr), path(bam)
+    // tuple path(reads_01), path(reads_02)       // Required:    One genome assembly to evaluate path(bam)            // Required:    Corresponding aligned file
+    // path(asm_chr)
 
     output:
     tuple val(meta), path("*-REAPR"), emit: reapr_dir
@@ -33,16 +34,11 @@ process REAPR {
     def args   = task.ext.args ?: ''
     def VERSION = '1.0.18' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
     """
-    reapr perfectfrombam \\
-        $bam \\
-        ${prefix}-perfect \\
-        100 500 3 4 76
 
     reapr pipeline \\
-        $asm \\
-        $bam \\
-        ${prefix}-REAPR \\
-        ${prefix}-perfect
+        $asm_chr \\
+        ${bam} \\
+        ${asm_chr.baseName}-REAPR
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

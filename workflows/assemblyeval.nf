@@ -165,7 +165,7 @@ workflow ASSEMBLYEVAL {
 
     if (!params.skip_correctness) {
         CORRECTNESS_ASM (
-        READ_MAPPING.out.joined_asm_bam, READ_MAPPING.out.asm, READ_MAPPING.out.bam, READ_MAPPING.out.bai, longreads_ch
+        READ_MAPPING.out.joined_asm_bam, READ_MAPPING.out.asm, READ_MAPPING.out.bam, READ_MAPPING.out.bai, READ_MAPPING.out.shortreads_ch, longreads_ch
         )
     }
     
@@ -224,8 +224,10 @@ workflow ASSEMBLYEVAL {
     // // out_table_ch = Channel.fromPath("out_table.csv")
     
     // COMPLETENESS_ASM.out.busco_short_summaries_txt.view{ "REAPR: $it" }
+
+    weights_yaml_ch = Channel.fromPath(params.yaml_weights_file, checkIfExists: true)
     
-    PARSE_RESULTS ( out_asm_ch, out_ale_ch, out_reapr_ch, out_busco_re_summary_ch, out_quast_ch, out_merfin_qv_ch, out_merfin_completeness_ch, out_compleasm_ch, out_craq_ch )
+    PARSE_RESULTS ( out_asm_ch, out_ale_ch, out_reapr_ch, out_busco_re_summary_ch, out_quast_ch, out_merfin_qv_ch, out_merfin_completeness_ch, out_compleasm_ch, out_craq_ch, weights_yaml_ch )
     // PARSE_RESULTS.out.res.view{ "\n\nRESULTS ARE IN: $it"}
 
     // // // CORRECTNESS_ASM.out.reapr.collect( {it[1]}, sort: {it.getName()} ).set{ new_collect }

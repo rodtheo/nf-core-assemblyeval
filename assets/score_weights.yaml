@@ -1,0 +1,20 @@
+correctness:
+  - ale: 0.2
+  - reapr_fcd: 0.2
+  - R-AQI: 0.1
+  - S-AQI: 0.1
+  - pct_frameshift: 0.2
+  - merfin_qv_ast: 0.2
+completeness:
+  - pctcomplete: 0.4
+  - pctmissing: 0.3
+  - merfin_completeness: 0.3
+contiguity:
+  - contigs: 0.2
+  - n50: 0.2
+  - auN: 0.4
+  - largest: 0.2
+score:
+  - correctness: 0.4
+  - completeness: 0.2
+  - contiguity: 0.4

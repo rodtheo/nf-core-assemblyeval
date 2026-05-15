@@ -27,8 +27,16 @@ def check_fasta(file_in, file_out):
 	# destination = Path(input.genome+".bkp")
 	# with destination.open(mode="xb") as fid:
 	# 		fid.write(source.read_bytes())
+	split_by_chr = True
+	if split_by_chr:
+		for record in sequences:
+			destination_chr = destination.parent / (destination.stem + "--" + record.id + destination.suffix)
+			with open(str(destination_chr), "w") as outgenome:
+				SeqIO.write(record, outgenome, "fasta")
+    
+    # else:
 	with open(str(destination), "w") as outgenome:
-			SeqIO.write(sequences, outgenome, "fasta")
+		SeqIO.write(sequences, outgenome, "fasta")
 
 
 def parse_args(argv=None):
