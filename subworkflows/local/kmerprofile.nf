@@ -83,9 +83,9 @@ workflow KMER_PROFILE {
 	// (1.4) Rename it as merged_meryldb - SKIPPED BECAUSE WE JOIN THE READS?
 
 	// (1.5-ROD) Keep only k-mers with frequency > 1
-	MERYL_GREATER_THAN (
-        MERYL_COUNT_READS_01.out.meryl_db
-    )
+	// MERYL_GREATER_THAN (
+    //     MERYL_COUNT_READS_01.out.meryl_db
+    // )
 
 	// (1.6) Generate histogram 
 	MERYL_HISTOGRAM_READS_PRE (
@@ -120,7 +120,7 @@ workflow KMER_PROFILE {
     )
 
     // MERYL_GREATER_THAN.out.meryl_db.combine(GENOMESCOPE2_PRE.out.lookup_table).combine(peak_ch_val).set{ to_merfin_ch }
-    MERYL_GREATER_THAN.out.meryl_db.combine(GENOMESCOPE2_PRE.out.lookup_table, by: [0]).combine(peak_out, by: [0]).map{ meta, readmer, lt, peak ->
+    MERYL_COUNT_READS_01.out.meryl_db.combine(GENOMESCOPE2_PRE.out.lookup_table, by: [0]).combine(peak_out, by: [0]).map{ meta, readmer, lt, peak ->
          [['id_to_join': meta.get("id")], meta, readmer, meta, lt, peak.text.trim()] }.set{ to_merfin_ch }
 
     // to_merfin_ch_test.view{ "TO MERFIN: $it" }

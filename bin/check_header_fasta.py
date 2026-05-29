@@ -31,8 +31,11 @@ def check_fasta(file_in, file_out):
 	if split_by_chr:
 		for record in sequences:
 			destination_chr = destination.parent / (destination.stem + "--" + record.id + destination.suffix)
+			destination_chr_bed = destination.parent / (destination.stem + "--" + record.id + ".bed")
 			with open(str(destination_chr), "w") as outgenome:
 				SeqIO.write(record, outgenome, "fasta")
+			with open(str(destination_chr_bed), "w") as outbed:
+				outbed.write(f"{record.id}\t0\t{len(record.seq)}")
     
     # else:
 	with open(str(destination), "w") as outgenome:

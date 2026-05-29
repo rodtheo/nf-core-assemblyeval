@@ -1,6 +1,7 @@
 process REAPR_BY_CHR {
     tag "$meta.id"
-    label 'process_high'
+    label 'process_single'
+    errorStrategy 'ignore'
 
     // conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
@@ -33,12 +34,22 @@ process REAPR_BY_CHR {
     def prefix = task.ext.prefix ?: "${meta.id}"
     def args   = task.ext.args ?: ''
     def VERSION = '1.0.18' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
+    def intermediate_files = [
+        './*-REAPR/00.Sample',
+        './*-REAPR/00.assembly*',
+        './*-REAPR/01.*',
+        './*-REAPR/02.*',
+        './*-REAPR/04.*'
+    ]
     """
 
     reapr pipeline \\
         $asm_chr \\
         ${bam} \\
         ${asm_chr.baseName}-REAPR
+
+    # clean-up
+    rm -rf ${intermediate_files.join(' ')}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

@@ -27,7 +27,7 @@ process ALE_TO_WIGGLE {
     def prefix  = task.ext.prefix ?: "${meta.id}"
     def VERSION = '20180904' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
     """
-    ale2wiggle.py \\
+    ale2wiggle_gz.py \\
         $aleout
 
     cat <<-END_VERSIONS > versions.yml

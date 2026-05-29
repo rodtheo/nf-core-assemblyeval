@@ -47,7 +47,7 @@ process BWAMEM2_MEM {
         -t ${task.cpus} \\
         \$INDEX \\
         ${reads} \\
-        | samtools view -h -F 4 -b - | samtools ${samtools_command} ${args2} -@ ${task.cpus} ${reference} -o ${prefix}.${extension} -
+        | samtools ${samtools_command} ${args2} -@ ${task.cpus} ${reference} -o ${prefix}.${extension} -
     """
 
     stub:

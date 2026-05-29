@@ -11,6 +11,7 @@ import re
 from collections import OrderedDict
 from collections import defaultdict
 import yaml
+import gzip
 
 logger = logging.getLogger()
 
@@ -188,7 +189,8 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
                 if len(my_list_ale) == len(my_list):
                     ale_file = my_list_ale[idx]
                     if Path(ale_file).exists():
-                        with open(ale_file) as infreapr:
+                        # with open(ale_file) as infreapr:
+                        with gzip.open(ale_file, 'rt') as infreapr:
                                 # for line in infreapr.readlines():
                                 for line in infreapr:
                                         match_score = re.match(r'#\sALE_score:\s(-\d+.\d+)', line)

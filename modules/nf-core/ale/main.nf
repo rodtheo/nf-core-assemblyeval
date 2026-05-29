@@ -12,7 +12,7 @@ process ALE {
     tuple val(meta), path(asm), path(bam)
 
     output:
-    tuple val(meta), path("*_ALEoutput.txt"), emit: ale
+    tuple val(meta), path("*_ALEoutput.txt.gz"), emit: ale
     path "versions.yml"                     , emit: versions
 
     when:
@@ -29,6 +29,10 @@ process ALE {
         $asm \\
         ${prefix}_ALEoutput.txt
 
+    gzip ${prefix}_ALEoutput.txt
+
+    rm -rf ${prefix}_ALEoutput.txt
+
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         ale: $VERSION
@@ -40,7 +44,7 @@ process ALE {
     def prefix  = task.ext.prefix ?: "${meta.id}"
     def VERSION = '20180904' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
     """
-    touch ${prefix}_ALEoutput.txt
+    touch ${prefix}_ALEoutput.txt.gz
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

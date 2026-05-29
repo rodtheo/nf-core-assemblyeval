@@ -6,6 +6,7 @@ include { REAPR } from '../../modules/local/REAPR'
 include { REAPR_BY_CHR } from '../../modules/local/REAPR_by_chr'
 include { REAPR_BY_CHR_PREPROCESS } from '../../modules/local/REAPR_by_chr_preprocess'
 include { UCSC_BIGWIGTOBEDGRAPH } from '../../modules/local/bigwigtobedgraph'
+include { UCSC_WIGTOBEDGRAPH_GZ } from '../../modules/local/wigtobedgraph'
 include { HEADER_FASTA_REAPR } from '../../modules/local/header_fasta_reapr'
 include { IGVREPORTS } from '../../modules/nf-core/igvreports/main'
 include { PREPARE_REPORT_IGV } from '../../modules/local/prepare_report_igv'
@@ -19,6 +20,7 @@ include { BWA_INDEX } from '../../modules/nf-core/bwa/index/main'
 include { BWA_MEM } from '../../modules/nf-core/bwa/mem/main'
 include { BWAMEM2_INDEX } from '../../modules/nf-core/bwamem2/index/main'
 include { BWAMEM2_MEM } from '../../modules/nf-core/bwamem2/mem/main'
+include { BEDTOOLS_INTERSECT } from '../../modules/nf-core/bedtools/intersect/main'
 
 
 workflow CORRECTNESS_ASM { 
@@ -175,99 +177,117 @@ workflow CORRECTNESS_ASM {
 		shortreads_ch.map{ meta_id, meta_cor_reads, reads, meta_asm, asm -> [ meta_id, meta_cor_reads, reads ] }.set{ right_reapr_ch }
 
 
+		// A PARTIR DAQUI BEDTOOLS STRATEGY
 		
-		// input_reapr_ch.reapr.map{ meta, bam -> [meta['id'], meta, bam]}.set{ right_reapr_ch }
-
-		// left_reapr_ch.join(right_reapr_ch).map{ meta_id, meta_asm, asm, meta_cor_reads, reads -> [meta_asm, asm, reads]}.set{ reapr_ch_header }
-
-		// shortreads_ch.map{ meta_id, meta_cor_reads, reads, meta_asm, asm -> [ meta_asm, asm ] }.set{ reference_bwa_ch }
-
-
-
-		// left_reapr_ch.view{ "\n--------------\nREEEEAPR LEFT: $it" }
-
-		// input_reapr_ch.reapr.map{ meta, bam -> [meta['id'], meta, bam]}.set{ right_reapr_ch }
-
-		left_reapr_ch.join(right_reapr_ch, by: 0).set{ joined_ch_reapr_by_chr }
-
-		// joined_ch_reapr_by_chr.view{ "\n--------------\nREEEEAPR JOINED: $it" }
-
+		input_reapr_ch.reapr.map{ meta, bam -> [meta['id'], meta, bam]}.set{ right_reapr_ch }
+		HEADER_FASTA_REAPR.out.asm_bed.map{ meta, asm_bed -> [meta['id'], meta, asm_bed]}.set{ left_reapr_ch }
+		HEADER_FASTA_REAPR.out.asm_chr.map{ meta, asm_chr -> [meta['id'], meta, asm_chr]}.set{ left_reapr_by_chr_ch }
 		
-		joined_ch_reapr_by_chr.flatMap{ meta_id, meta_asm, asm_chr, meta_cor_reads, reads ->
+		
+		left_reapr_ch.join(right_reapr_ch, by: 0).join(left_reapr_by_chr_ch, by: 0).set{ joined_ch_reapr_by_chr_bed }
+
+		joined_ch_reapr_by_chr_bed.flatMap{ meta_id, meta_asm, asm_bed, meta_aln, bam_aln, meta_asm_chr, asm_chr ->
 
 			def combined = []
 			
 			// asm_chr[0]
-			for(asm_chr_single in asm_chr) {
+			// for(asm_chr_single in asm_bed) {
+			asm_bed.eachWithIndex { asm_single_bed, idx ->
 				def meta_new = meta_asm.clone();
 				meta_new['id_original'] = meta_asm['id']
-				meta_new['id'] = asm_chr_single.baseName
-				combined = combined + [meta_new, asm_chr_single, reads]
+				meta_new['id'] = asm_single_bed.baseName
+				combined = combined + [meta_new, bam_aln, asm_single_bed, asm_chr[idx]]
 			}
 			
 			combined
 			// [meta_asm, asm_chr, bam]
 			 
-			}.buffer( size: 3 ).set{ input_reapr_by_chr_ch }
+			}.buffer( size: 4 ).set{ input_reapr_by_chr_ch_bed }
 
-		fasta_chr_ch = input_reapr_by_chr_ch.map{ meta, asm_chr, reads -> [meta, asm_chr] }
+		// input_reapr_by_chr_ch_bed.view{ "\n--------------\nREEEEAPR BY CHR BED INPUT: $it" }
 
-		BWAMEM2_INDEX ( fasta_chr_ch )
-
-		left_all = input_reapr_by_chr_ch.map{ meta, asm_chr, reads -> [meta['id'], meta, asm_chr, reads] }
+		input_reapr_by_chr_ch_bed.map{ meta_new, bam_aln, asm_bed, asm_chr -> [meta_new, bam_aln, asm_bed]}.set{ input_to_intersect_ch }
 
 
-
-		// reference_bwa_ch.view{ "ASSEMBLIES IDX: $it" }
-		// inputs_reads_asm_ch.map{ meta_cor_reads, reads, meta_asm, asm -> [ meta_cor_reads, reads ] }.set{ reads_ch_cor_meta }
-		// inputs_reads_asm_ch.map{ meta_cor_reads, reads, meta_asm, asm -> [ meta_asm, asm ] }.set{ asm_ch }
-		bwa_index_ch = BWAMEM2_INDEX.out.index.map{ meta, asm_idx -> [meta['id'], meta, asm_idx]}
-		left_all.join(bwa_index_ch).multiMap { meta_id, meta, asm_chr, reads, meta_bwa, asm_idx -> 
-			reads: [meta, reads]
-			idx: [meta, asm_idx]
-			asm: [meta, asm_chr]
-			sort: true
-		}.set{ bwa_inputs_joined }
-
-		left_all.join(bwa_index_ch).map{  meta_id, meta, asm_chr, reads, meta_bwa, asm_idx -> [meta_id, meta, asm_chr, reads, meta_bwa, asm_idx]}.set{ bwa_inputs_joined_debug }
-
-		// bwa_inputs_joined_debug.view{ "\n--------------\nBWA INPUTS JOINED DEBUG: $it" }
-
-		// bwa_inputs_joined.reads.view{ "BWA - READS: $it" }
-		// bwa_inputs_joined.idx.view{ "BWA - IDX: $it" }
-		// bwa_inputs_joined.asm.view{ "BWA - ASM: $it" }
-		// bwa_inputs_joined.sort.view{ "BWA - SORT: $it" }
-        BWAMEM2_MEM ( bwa_inputs_joined.reads, bwa_inputs_joined.idx, bwa_inputs_joined.asm, bwa_inputs_joined.sort )
-
-		// input_reapr_by_chr_ch.view{ "\n--------------\nREEEEAPR BY CHR INPUT: $it" }
-
-		right_join_bwa = BWAMEM2_MEM.out.bam.map{ meta, bam -> [meta['id'], meta, bam] }
-
-		left_all.join(right_join_bwa).map { meta_id, meta, asm_chr, reads, meta_bwa, bwa -> [meta, asm_chr, bwa] }.set{ reapr_ch_header }
-
-		// input_reapr_by_chr_ch.multiMap{ meta, asm, reads -> 
-		// asm: [meta, asm]
-		// short_reads: reads
-		// }.set{ reapr_ch_header }
-
-		// reapr_ch_header.view{ "\n--------------\nREEEEAPR HEADER: $it"}
+		BEDTOOLS_INTERSECT ( input_to_intersect_ch, [[], []] )
 
 
+		BEDTOOLS_INTERSECT.out.intersect.map{ meta, intersected_bam -> [meta['id'], meta, intersected_bam]}.set{ right_reapr_by_chr_ch }
+
+		// right_reapr_by_chr_ch.view{ "\n--------------\nREEEEAPR BY CHR BEDTOOLS INTERSECT: $it" }
+
+		// left_reapr_by_chr_ch.view{ "\n--------------\nREEEEAPR BY CHR BED LEFT: $it" }
+
+		input_reapr_by_chr_ch_bed.map{ meta_new, bam_aln, asm_bed, asm_chr -> [meta_new['id'], meta_new, asm_chr]}.set{ left_reapr_by_chr_ch }
 		
-		// HEADER_FASTA_REAPR.out.asm.join(input_reapr_ch.reapr, by: [0]).set { reapr_ch_header }
+		// left_reapr_by_chr_ch.view{ "\n--------------\nREEEEAPR BY CHR BED LEFT: $it" }
 
-		// reapr_ch_header.asm_by_chr.view{ "\n--------------\nREEEEAPR HEADER BY CHR: $it"}
+		left_reapr_by_chr_ch.join(right_reapr_by_chr_ch, by: 0).map{ meta_id, meta_asm, asm_chr, meta_bam, bam_chr -> [meta_asm, asm_chr, bam_chr] }.set{ reapr_ch_by_chr_bed }
 
-		// REAPR_BY_CHR ( reapr_ch_header.asm, reapr_ch_header.asm_by_chr ).set{ reapr_results }
-		REAPR_BY_CHR ( reapr_ch_header ).set{ reapr_results }
 
-		// reapr_results.reapr_score_errors.map{ meta, scoreerrors -> [meta['id_original'], scoreerrors] }.groupTuple().set{ reapr_scores_by_genome_ch }
+		// reapr_ch_by_chr_bed.view{ "\n--------------\nREEEEAPR BY CHR BED JOINED: $it" }
+
+		REAPR_BY_CHR ( reapr_ch_by_chr_bed ).set{ reapr_results }
 
 		reapr_results.reapr_score_errors.map{ meta, scoreerrors -> [meta['id_original'], scoreerrors] }.collectFile().map{ file -> [file.baseName, file] }.set{ reapr_scores_by_genome_ch }
 
 		reapr_results.reapr_score_per_base.map{ meta, scoreerrors_per_base -> [meta['id_original'], scoreerrors_per_base] }.collectFile().map{ file -> [['id': file.baseName], file] }.set{ reapr_score_per_base_ch }
 
-		// reapr_scores_by_genome_ch.view{ "\n--------------\nREEEEAPR SCORES BY GENOME: $it" }		
+
+		reapr_score_per_base_ch.view{ "\n--------------\nREEEEAPR RESULTS BY CHR BED: $it" }
+
+
+		// ACABA AQUI
+
+
+		// left_reapr_ch.join(right_reapr_ch, by: 0).set{ joined_ch_reapr_by_chr }
+
+		
+		// joined_ch_reapr_by_chr.flatMap{ meta_id, meta_asm, asm_chr, meta_cor_reads, reads ->
+
+		// 	def combined = []
+			
+		// 	// asm_chr[0]
+		// 	for(asm_chr_single in asm_chr) {
+		// 		def meta_new = meta_asm.clone();
+		// 		meta_new['id_original'] = meta_asm['id']
+		// 		meta_new['id'] = asm_chr_single.baseName
+		// 		combined = combined + [meta_new, asm_chr_single, reads]
+		// 	}
+			
+		// 	combined
+		// 	// [meta_asm, asm_chr, bam]
+			 
+		// 	}.buffer( size: 3 ).set{ input_reapr_by_chr_ch }
+
+		// fasta_chr_ch = input_reapr_by_chr_ch.map{ meta, asm_chr, reads -> [meta, asm_chr] }
+
+		// BWAMEM2_INDEX ( fasta_chr_ch )
+
+		// left_all = input_reapr_by_chr_ch.map{ meta, asm_chr, reads -> [meta['id'], meta, asm_chr, reads] }
+
+		// bwa_index_ch = BWAMEM2_INDEX.out.index.map{ meta, asm_idx -> [meta['id'], meta, asm_idx]}
+		// left_all.join(bwa_index_ch).multiMap { meta_id, meta, asm_chr, reads, meta_bwa, asm_idx -> 
+		// 	reads: [meta, reads]
+		// 	idx: [meta, asm_idx]
+		// 	asm: [meta, asm_chr]
+		// 	sort: true
+		// }.set{ bwa_inputs_joined }
+
+		// left_all.join(bwa_index_ch).map{  meta_id, meta, asm_chr, reads, meta_bwa, asm_idx -> [meta_id, meta, asm_chr, reads, meta_bwa, asm_idx]}.set{ bwa_inputs_joined_debug }
+
+        // BWAMEM2_MEM ( bwa_inputs_joined.reads, bwa_inputs_joined.idx, bwa_inputs_joined.asm, bwa_inputs_joined.sort )
+
+		// right_join_bwa = BWAMEM2_MEM.out.bam.map{ meta, bam -> [meta['id'], meta, bam] }
+
+		// left_all.join(right_join_bwa).map { meta_id, meta, asm_chr, reads, meta_bwa, bwa -> [meta, asm_chr, bwa] }.set{ reapr_ch_header }
+
+		// REAPR_BY_CHR ( reapr_ch_header ).set{ reapr_results }
+
+		// reapr_results.reapr_score_errors.map{ meta, scoreerrors -> [meta['id_original'], scoreerrors] }.collectFile().map{ file -> [file.baseName, file] }.set{ reapr_scores_by_genome_ch }
+
+		// reapr_results.reapr_score_per_base.map{ meta, scoreerrors_per_base -> [meta['id_original'], scoreerrors_per_base] }.collectFile().map{ file -> [['id': file.baseName], file] }.set{ reapr_score_per_base_ch }
+
 
 	} else {
 
@@ -331,9 +351,11 @@ workflow CORRECTNESS_ASM {
 
 	// wig_base_ch.wig.view{ "\n--------------\nWIG TO BEDGRAPH: $it \n\n" }
 
-	UCSC_WIGTOBIGWIG( wig_base_ch.wig, wig_base_ch.sizes_in )
+	UCSC_WIGTOBEDGRAPH_GZ( wig_base_ch.wig, wig_base_ch.sizes_in )
 
-	UCSC_BIGWIGTOBEDGRAPH(UCSC_WIGTOBIGWIG.out)
+	// UCSC_WIGTOBIGWIG( wig_base_ch.wig, wig_base_ch.sizes_in )
+
+	// UCSC_BIGWIGTOBEDGRAPH(UCSC_WIGTOBIGWIG.out)
 
 	// def ch_render_igv = true
 	// path(strER_CSE_bed), path(strER_CSH_bed), path(locER_CRE_bed), path(locER_CRH_bed)
@@ -386,23 +408,23 @@ workflow CORRECTNESS_ASM {
 	BEDTOOLS_SORT( CRAQ.out.regional_aqi_bdg, [])
 	TABIX_BGZIPTABIX_CRAQ( BEDTOOLS_SORT.out.sorted )
 
-	TABIX_BGZIPTABIX( UCSC_BIGWIGTOBEDGRAPH.out.bedgraph )
+	// TABIX_BGZIPTABIX( UCSC_BIGWIGTOBEDGRAPH.out.bedgraph )
 
-	TABIX_BGZIPTABIX.out.gz_tbi.filter{ v -> v[1].toString()=~/.*_base.*gz$/ }.map{ meta, bedgraph, bedgraph_tbi -> [['id': meta['id_original']], bedgraph] }.set{bedgraph_filtered_ch}
-	TABIX_BGZIPTABIX.out.gz_tbi.filter{ v -> v[2].toString()=~/.*_base.*gz\.tbi$/ }.map{ meta, bedgraph, bedgraph_tbi -> [['id': meta['id_original']], bedgraph_tbi] }.set{bedgraph_filtered_tbi_ch}
+	UCSC_WIGTOBEDGRAPH_GZ.out.gz_tbi.filter{ v -> v[1].toString()=~/.*_base.*gz$/ }.map{ meta, bedgraph, bedgraph_tbi -> [['id': meta['id_original']], bedgraph] }.set{bedgraph_filtered_ch}
+	UCSC_WIGTOBEDGRAPH_GZ.out.gz_tbi.filter{ v -> v[2].toString()=~/.*_base.*gz\.tbi$/ }.map{ meta, bedgraph, bedgraph_tbi -> [['id': meta['id_original']], bedgraph_tbi] }.set{bedgraph_filtered_tbi_ch}
 
 	// bedgraph_filtered_ch.view{ "\n--------------\nTEMPLATE TO REPORT: $it \n\n" }
-	TABIX_BGZIPTABIX.out.gz_tbi.filter{ v -> v[1].toString()=~/.*_depth.*gz$/ }.map{ meta, bedgraph, bedgraph_tbi -> [['id': meta['id_original']], bedgraph] }.set{bedgraph_filtered_depth_ch}
-	TABIX_BGZIPTABIX.out.gz_tbi.filter{ v -> v[2].toString()=~/.*_depth.*gz\.tbi$/ }.map{ meta, bedgraph, bedgraph_tbi -> [['id': meta['id_original']], bedgraph_tbi] }.set{bedgraph_filtered_depth_tbi_ch}
+	UCSC_WIGTOBEDGRAPH_GZ.out.gz_tbi.filter{ v -> v[1].toString()=~/.*_depth.*gz$/ }.map{ meta, bedgraph, bedgraph_tbi -> [['id': meta['id_original']], bedgraph] }.set{bedgraph_filtered_depth_ch}
+	UCSC_WIGTOBEDGRAPH_GZ.out.gz_tbi.filter{ v -> v[2].toString()=~/.*_depth.*gz\.tbi$/ }.map{ meta, bedgraph, bedgraph_tbi -> [['id': meta['id_original']], bedgraph_tbi] }.set{bedgraph_filtered_depth_tbi_ch}
 
-	TABIX_BGZIPTABIX.out.gz_tbi.filter{ v -> v[1].toString()=~/.*_insert.*gz$/ }.map{ meta, bedgraph, bedgraph_tbi -> [['id': meta['id_original']], bedgraph] }.set{bedgraph_filtered_insert_ch}
-	TABIX_BGZIPTABIX.out.gz_tbi.filter{ v -> v[2].toString()=~/.*_insert.*gz\.tbi$/ }.map{ meta, bedgraph, bedgraph_tbi -> [['id': meta['id_original']], bedgraph_tbi] }.set{bedgraph_filtered_insert_tbi_ch}
+	UCSC_WIGTOBEDGRAPH_GZ.out.gz_tbi.filter{ v -> v[1].toString()=~/.*_insert.*gz$/ }.map{ meta, bedgraph, bedgraph_tbi -> [['id': meta['id_original']], bedgraph] }.set{bedgraph_filtered_insert_ch}
+	UCSC_WIGTOBEDGRAPH_GZ.out.gz_tbi.filter{ v -> v[2].toString()=~/.*_insert.*gz\.tbi$/ }.map{ meta, bedgraph, bedgraph_tbi -> [['id': meta['id_original']], bedgraph_tbi] }.set{bedgraph_filtered_insert_tbi_ch}
 
-	TABIX_BGZIPTABIX.out.gz_tbi.filter{ v -> v[1].toString()=~/.*_kmer.*gz$/ }.map{ meta, bedgraph, bedgraph_tbi -> [['id': meta['id_original']], bedgraph] }.set{bedgraph_filtered_kmer_ch}
-	TABIX_BGZIPTABIX.out.gz_tbi.filter{ v -> v[2].toString()=~/.*_kmer.*gz\.tbi$/ }.map{ meta, bedgraph, bedgraph_tbi -> [['id': meta['id_original']], bedgraph_tbi] }.set{bedgraph_filtered_kmer_tbi_ch}
+	UCSC_WIGTOBEDGRAPH_GZ.out.gz_tbi.filter{ v -> v[1].toString()=~/.*_kmer.*gz$/ }.map{ meta, bedgraph, bedgraph_tbi -> [['id': meta['id_original']], bedgraph] }.set{bedgraph_filtered_kmer_ch}
+	UCSC_WIGTOBEDGRAPH_GZ.out.gz_tbi.filter{ v -> v[2].toString()=~/.*_kmer.*gz\.tbi$/ }.map{ meta, bedgraph, bedgraph_tbi -> [['id': meta['id_original']], bedgraph_tbi] }.set{bedgraph_filtered_kmer_tbi_ch}
 
-	TABIX_BGZIPTABIX.out.gz_tbi.filter{ v -> v[1].toString()=~/.*_place.*gz$/ }.map{ meta, bedgraph, bedgraph_tbi -> [['id': meta['id_original']], bedgraph] }.set{bedgraph_filtered_place_ch}
-	TABIX_BGZIPTABIX.out.gz_tbi.filter{ v -> v[2].toString()=~/.*_place.*gz\.tbi$/ }.map{ meta, bedgraph, bedgraph_tbi -> [['id': meta['id_original']], bedgraph_tbi] }.set{bedgraph_filtered_place_tbi_ch}
+	UCSC_WIGTOBEDGRAPH_GZ.out.gz_tbi.filter{ v -> v[1].toString()=~/.*_place.*gz$/ }.map{ meta, bedgraph, bedgraph_tbi -> [['id': meta['id_original']], bedgraph] }.set{bedgraph_filtered_place_ch}
+	UCSC_WIGTOBEDGRAPH_GZ.out.gz_tbi.filter{ v -> v[2].toString()=~/.*_place.*gz\.tbi$/ }.map{ meta, bedgraph, bedgraph_tbi -> [['id': meta['id_original']], bedgraph_tbi] }.set{bedgraph_filtered_place_tbi_ch}
 
 	// reapr_results.reapr_bam.map{ meta_complete, reapr_bam -> [['id': meta_complete['id']], reapr_bam]}.set{ reapr_bam_small_meta_ch }
 	// reapr_results.reapr_bai.map{ meta_complete, reapr_bai -> [['id': meta_complete['id']], reapr_bai]}.set{ reapr_bai_small_meta_ch }

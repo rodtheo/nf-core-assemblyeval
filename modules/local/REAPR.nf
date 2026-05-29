@@ -32,6 +32,13 @@ process REAPR {
     def prefix = task.ext.prefix ?: "${meta.id}"
     def args   = task.ext.args ?: ''
     def VERSION = '1.0.18' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
+    def intermediate_files = [
+        './*-REAPR/00.Sample',
+        './*-REAPR/00.assembly*',
+        './*-REAPR/01.*',
+        './*-REAPR/02.*',
+        './*-REAPR/04.*'
+    ]
     """
     reapr perfectfrombam \\
         $bam \\
@@ -43,6 +50,9 @@ process REAPR {
         $bam \\
         ${prefix}-REAPR \\
         ${prefix}-perfect
+
+    # clean-up
+    rm -rf ${intermediate_files.join(' ')}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
