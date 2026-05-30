@@ -1,6 +1,6 @@
 process REAPR_BY_CHR_PREPROCESS {
     tag "$meta.id"
-    label 'process_high'
+    label 'process_single'
 
     // conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?

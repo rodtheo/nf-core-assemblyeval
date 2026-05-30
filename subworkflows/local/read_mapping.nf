@@ -119,18 +119,18 @@ workflow READ_MAPPING {
 	joined_asm.map{ asm_id, asm, bam -> [asm[0], file(bam[1])] }.set{ input_sortable_bam_ch }
 	// input_sortable_bam_ch.view{ "INPUT SAMTOOLS SORT: $it \n===========================\n" }
 
-	FGBIO_SORTBAM ( input_sortable_bam_ch )
+	// FGBIO_SORTBAM ( input_sortable_bam_ch )
 
-	// SAMTOOLS_SORT( input_samtools_sort_ch.bam, tuple([],[]) )
+	SAMTOOLS_SORT( input_samtools_sort_ch.bam, tuple([],[]) )
 
 	// bams_ch.mix( SAMTOOLS_SORT.out.bam )
     //         .set { bams_ch }
 
 	// SAMTOOLS_SORT.out.bam.view{ "SORTED BAM: $it \n===========================\n" }
 
-	SAMTOOLS_INDEX( FGBIO_SORTBAM.out.bam )
+	SAMTOOLS_INDEX( SAMTOOLS_SORT.out.bam )
 
-	sorted_ch = FGBIO_SORTBAM.out.bam.map{ meta, bam -> [meta['id'], [meta, bam]] }
+	sorted_ch = SAMTOOLS_SORT.out.bam.map{ meta, bam -> [meta['id'], [meta, bam]] }
 
 	joined_asm_with_bai = left.join(sorted_ch, failOnMismatch: false)
 
