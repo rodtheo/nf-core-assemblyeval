@@ -440,7 +440,7 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
             if len(my_list_ale) == len(my_list):
                 # {'name': 'Sample_AssemblerA', 'ale': -100937528.909207, 'reapr_total_errors': '402', 'reapr_fcd': '196', 'reapr_low': '206', 'genomesize': 4090859, 
                 # 'contigs': 2, 'n50': 4065161, 'largest': 4065161, 'pctcomplete': '6.2', 'pctsingle': '5.7', 'pctduplicated': '0.5', 'pctfragmented': '3.0', 'pctmissing': '90.8', 'total_busco_searched_genes': '758', 'ncomplete': '47', 'nsingle': '43', 'nduplicated': '4', 'nfragmented': '23', 'nmissing': '688'}, {'name': 'Sample_AssemblerB', 'ale': -100937528.909207, 'reapr_total_errors': '402', 'reapr_fcd': '196', 'reapr_low': '206', 'genomesize': 4090859, 'contigs': 2, 'n50': 4065161, 'largest': 4065161, 'pctcomplete': '6.2', 'pctsingle': '5.7', 'pctduplicated': '0.5', 'pctfragmented': '3.0', 'pctmissing': '90.8', 'total_busco_searched_genes': '758', 'ncomplete': '47', 'nsingle': '43', 'nduplicated': '4', 'nfragmented': '23', 'nmissing': '688'}
-                dict_names = {'name': 'Assembly', 'ale': 'ALE score (neglog)', 'reapr_total_errors': 'REAPR erros', 'reapr_fcd': 'REAPR fcd', 'reapr_low': 'REAPR low',
+                dict_names = {'name': 'Assembly', 'ale': 'ALE score', 'reapr_total_errors': 'REAPR erros', 'reapr_fcd': 'REAPR fcd', 'reapr_low': 'REAPR low',
                 'genomesize': 'Assembly length', 'contigs': 'contigs', 'n50': 'N50', 'largest': 'Largest contig', 'auN': 'auN',
                 'pctcomplete': 'BUSCO complete (%)', 'pctsingle': 'BUSCO single (%)', 'pctduplicated': 'BUSCO duplicated (%)', 'pctfragmented':'BUSCO fragmented (%)',
                 'pctmissing': 'BUSCO missing (%)',
@@ -461,7 +461,7 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
             #  'Assembly length', 'contigs', 'N50', 'Largest contig', 'BUSCO complete (%)', 'BUSCO single (%)', 'BUSCO duplicated (%)', 'BUSCO fragmented (%)', 'BUSCO missing (%)', 'BUSCO complete', 'BUSCO single', 'BUSCO duplicated', 'BUSCO fragmented', 'BUSCO missing', 'ALE normalized']
         else:
             if len(my_list_ale) == len(my_list):
-                dict_names = {'name': 'Assembly', 'ale': 'ALE score (neglog)', 'reapr_total_errors': 'REAPR erros', 'reapr_fcd': 'REAPR fcd', 'reapr_low': 'REAPR low',
+                dict_names = {'name': 'Assembly', 'ale': 'ALE score', 'reapr_total_errors': 'REAPR erros', 'reapr_fcd': 'REAPR fcd', 'reapr_low': 'REAPR low',
              'genomesize': 'Assembly length', 'contigs': 'contigs', 'n50': 'N50', 'largest': 'Largest contig', 'auN': 'auN',
              'pctcomplete': 'COMPLEASM complete (%)', 'pctsingle': 'COMPLEASM single (%)', 'pctduplicated': 'COMPLEASM duplicated (%)', 'pctfragmented':'COMPLEASM fragmented Class I (%)', 'pctincomplete':'COMPLEASM fragmented Class II (%)',
               'pctmissing': 'COMPLEASM missing (%)',
@@ -547,7 +547,7 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
         # print(data_read[column_types['score']['cols']])
         data_read['Score'] = np.average(data_read[column_types['score']['cols']], weights=column_types['score']['weights'], axis=1)
 
-        data_read = data_read.drop(columns=["Error-free bases (%)", "REAPR erros", "REAPR low"] + column_types['correctness']['cols'] + column_types['contiguity']['cols'] + column_types['completeness']['cols'])
+        data_read = data_read.drop(columns=["Error-free bases (%)", "REAPR erros", "REAPR low"] + column_types['correctness']['cols'] + column_types['contiguity']['cols'] + column_types['completeness']['cols'] + ['neglike_ale'])
 
         data_read.to_csv(file_out, index=False, sep="\t")
 

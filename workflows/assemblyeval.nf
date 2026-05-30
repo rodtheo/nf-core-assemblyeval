@@ -291,12 +291,13 @@ workflow ASSEMBLYEVAL {
     // ch_multiqc_files = ch_multiqc_files.mix(Channel.fromPath("$projectDir/assets/"))
 
 
-    KMER_PROFILE.out.merqury_cn.map{ meta, cn_spectra -> [['to_join': meta.get("to_join")], meta, cn_spectra] }.set{ to_jinja_merqury_ch }
-    view{ "MERQURY CN: $it" }
+    // KMER_PROFILE.out.merqury_cn.map{ meta, cn_spectra -> [['to_join': meta.get("to_join")], meta, cn_spectra] }.set{ to_jinja_merqury_ch }
+    // view{ "MERQURY CN: $it" }
 
-    KMER_PROFILE.out.genomescope2_res.map{ meta, gs_ln, gs_fitted -> [['to_join': meta.get('id')], meta, gs_ln, gs_fitted] }.set{ to_jinja_genscope_ch }
+    // KMER_PROFILE.out.genomescope2_res.map{ meta, gs_ln, gs_fitted -> [['to_join': meta.get('id')], meta, gs_ln, gs_fitted] }.set{ to_jinja_genscope_ch }
+    KMER_PROFILE.out.genomescope2_res.map{ meta, gs_ln, gs_fitted -> [meta, gs_ln, gs_fitted] }.set{ to_jinja_samp_ch }
 
-    to_jinja_genscope_ch.combine(to_jinja_merqury_ch, by: [0]).map{ meta_join, meta, gs_ln , gs_fitted, meta_mq, cn_spectra -> [meta_mq, gs_ln, cn_spectra] }.set{ to_jinja_samp_ch }
+    // to_jinja_genscope_ch.combine(to_jinja_merqury_ch, by: [0]).map{ meta_join, meta, gs_ln , gs_fitted, meta_mq, cn_spectra -> [meta_mq, gs_ln, cn_spectra] }.set{ to_jinja_samp_ch }
 
     Channel.fromPath("$projectDir/assets/template_mqc.html").combine(to_jinja_samp_ch).set{ to_jinja_ch }
 

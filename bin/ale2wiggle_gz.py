@@ -46,17 +46,17 @@
 import gzip
 
 def convertToWiggle(inFilegz):
-	kwig = open(inFilegz.rstrip('.gz') + "-kmer.wig", 'w')
-	pwig = open(inFilegz.rstrip('.gz') + "-place.wig", 'w')
-	iwig = open(inFilegz.rstrip('.gz') + "-insert.wig", 'w')
-	dwig = open(inFilegz.rstrip('.gz') + "-depth.wig", 'w')
-	wig = open(inFilegz.rstrip('.gz') + ".wig", 'w')
+	kwig = gzip.open(inFilegz.rstrip('.gz') + "-kmer.wig.gz", "wt")
+	pwig = gzip.open(inFilegz.rstrip('.gz') + "-place.wig.gz", "wt")
+	iwig = gzip.open(inFilegz.rstrip('.gz') + "-insert.wig.gz", "wt")
+	dwig = gzip.open(inFilegz.rstrip('.gz') + "-depth.wig.gz", "wt")
+	wig = gzip.open(inFilegz.rstrip('.gz') + ".wig.gz", "wt")
 
 	pwig.write("track name=ALE-place color=0,0,255 group=ALE priority=1\n")
 	iwig.write("track name=ALE-insert color=255,0,255 group=ALE priority=1\n")
 	dwig.write("track name=ALE-depth color=255,0,0 group=ALE priority=2\n")
 	kwig.write("track name=ALE-kmer color=0,255,0 group=ALE priority=3\n")
-	wig.write("track name=depth color=0,0,0 group=ALE priotity=4\n")
+	wig.write("track name=depth color=0,0,0 group=ALE priority=4\n")
 
 	with gzip.open(inFilegz, 'rt') as f:
 		for line in f:
