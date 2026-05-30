@@ -25,7 +25,9 @@ process SUBSET_REAPR {
     def prefix  = task.ext.prefix ?: "${meta.id}"
     def VERSION = '22.04' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
     """
-    zcat $scoreerrors \\
+    zcat -f -v $scoreerrors > ${prefix}_reaper_score_errors.gff
+
+    cat ${prefix}_reaper_score_errors.gff \\
     |sed 's/ /_/g' | grep "FCD_failure" | cut -f 1,4,5,9 > ${prefix}_reaper_base.bed
 
     cat $strER_CSE_bed $strER_CSH_bed $locER_CRE_bed $locER_CRH_bed | cut -f 1,2,3,5 > ${prefix}_craq.bed

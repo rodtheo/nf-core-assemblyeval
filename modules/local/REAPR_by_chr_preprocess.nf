@@ -1,4 +1,4 @@
-process REAPR {
+process REAPR_BY_CHR_PREPROCESS {
     tag "$meta.id"
     label 'process_high'
 
@@ -14,15 +14,15 @@ process REAPR {
 
     input:
     tuple val(meta), path(asm), path(bam)       // Required:    One genome assembly to evaluate path(bam)            // Required:    Corresponding aligned file
-    
+    // path(asm_chr)
 
     output:
-    tuple val(meta), path("*-REAPR"), emit: reapr_dir
-    tuple val(meta), path("*-REAPR/03.score.errors.gff.gz"), emit:reapr_score_errors
-    tuple val(meta), path("*-REAPR/00.in.bam"), emit:reapr_bam
-    tuple val(meta), path("*-REAPR/00.in.bam.bai"), emit:reapr_bai
-    tuple val(meta), path("*-REAPR/05.summary.report.txt"), emit:reapr_summary
-    tuple val(meta), path("*-REAPR/03.score.per_base.gz"), emit: reapr_score_per_base
+    tuple val(meta), path("*-preprocess-REAPR"), emit: reapr_preprocess_dir
+    // tuple val(meta), path("*-REAPR/03.score.errors.gff.gz"), emit:reapr_score_errors
+    // tuple val(meta), path("*-REAPR/00.in.bam"), emit:reapr_bam
+    // tuple val(meta), path("*-REAPR/00.in.bam.bai"), emit:reapr_bai
+    // tuple val(meta), path("*-REAPR/05.summary.report.txt"), emit:reapr_summary
+    // tuple val(meta), path("*-REAPR/03.score.per_base.gz"), emit: reapr_score_per_base
     path "versions.yml", emit: versions
 
     when:
@@ -32,27 +32,11 @@ process REAPR {
     def prefix = task.ext.prefix ?: "${meta.id}"
     def args   = task.ext.args ?: ''
     def VERSION = '1.0.18' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
-    def intermediate_files = [
-        './*-REAPR/00.Sample',
-        './*-REAPR/00.assembly*',
-        './*-REAPR/01.*',
-        './*-REAPR/02.*',
-        './*-REAPR/04.*'
-    ]
     """
-    reapr perfectfrombam \\
-        $bam \\
-        ${prefix}-perfect \\
-        100 500 3 4 76
-
-    reapr pipeline \\
+    reapr preprocess \\
         $asm \\
         $bam \\
-        ${prefix}-REAPR \\
-        ${prefix}-perfect
-
-    # clean-up
-    rm -rf ${intermediate_files.join(' ')}
+        ${asm}-preprocess-REAPR
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

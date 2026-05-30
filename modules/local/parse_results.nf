@@ -6,7 +6,7 @@ process PARSE_RESULTS {
     conda "anaconda::pandas=1.5.2"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'https://depot.galaxyproject.org/singularity/pandas:1.5.2' :
-        'docker.io/rodtheo/parse_assembly_eval:1.1.0' }"
+        'docker.io/rodtheo/parse_assembly_eval:1.2.0' }"
 
     // [ ...
     //      [ sample_id, [ ale_res ], [reapr_res], [busco_re_summary], [quast_res]],
@@ -22,6 +22,7 @@ process PARSE_RESULTS {
     path merfin_completeness_res
     path compleasm_table
     path craq_res
+    path yaml_weights
 
     output:
     tuple val(meta), path('table_data_mqc.out'), emit: res
@@ -45,6 +46,7 @@ process PARSE_RESULTS {
         --merfin_comp_res "$merfin_completeness_res" \\
         --compleasm_table "$compleasm_table" \\
         --craq_aqi_bedgraph "$craq_res" \\
+        --yaml-weights-file "$yaml_weights" \\
         -f table_data_mqc.out
 
     cat <<-END_VERSIONS > versions.yml

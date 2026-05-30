@@ -1,6 +1,6 @@
 process UCSC_BIGWIGTOBEDGRAPH {
     tag "$meta.id"
-    label 'process_single'
+    label 'process_high'
 
     // WARN: Version information not provided by tool on CLI. Please update version string below when bumping container versions.
     conda "${moduleDir}/environment.yml"

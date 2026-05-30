@@ -30,6 +30,11 @@ process COMPLEASM {
     // def busco_config = config_file ? "--config $config_file" : ''
     def compleasm_lineage = lineage.equals('auto') ? '--autolineage' : "-l ${lineage}"
     // def busco_lineage_dir = busco_lineages_path ? "--download_path ${busco_lineages_path}" : ''
+    def intermediate_files = [
+        './*-compleasm/hmmer_output',
+        './*-compleasm/*.gff',
+        './*-compleasm/*.fasta',
+    ]
     """
     compleasm run \\
         -t $task.cpus \\
@@ -37,6 +42,9 @@ process COMPLEASM {
         $args \\
         -a $asm \\
         -o ${prefix}-compleasm
+
+    # clean-up
+    rm -rf ${intermediate_files.join(' ')}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

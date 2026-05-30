@@ -9,8 +9,27 @@ import sys
 from pathlib import Path
 import re
 from collections import OrderedDict
+from collections import defaultdict
+import yaml
+import gzip
 
 logger = logging.getLogger()
+
+def normalization_max_best(input_value, input_array, decimal_places=4):
+    # min-max normalization
+    # print(f"{num:.4f}")  # Output: 3.1416
+    res = ((input_value-np.nanmin(input_array))/(np.nanmax(input_array)-np.nanmin(input_array)))
+    return f"{res:.{decimal_places}f}"
+
+def normalization_closer(input_value, input_array, target=0, decimal_places=4):
+    # normalization for when values are closer to a target (in this case 0) are best
+    res = 1 - ((np.abs(input_value - target)) / (np.nanmax(np.abs(input_array - target))))
+    return f"{res:.{decimal_places}f}"
+
+def normalization_lower_best(input_value, input_array, decimal_places=4):
+    # normalization for when lower values are better
+    res = 1 - float(normalization_max_best(input_value, input_array, decimal_places=10))
+    return f"{res:.{decimal_places}f}"
 
 def parse_busco(out_short_summary):
     dict_busco = {}
@@ -119,7 +138,7 @@ def parse_compleasm(out_short_summary, compleasm_table):
 
     return(dict_busco)
 
-def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, quast_res, file_out, busco, merfin_qv_res, merfin_comp_res, compleasm_table, craq_aqi_bedgraph):
+def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, quast_res, file_out, busco, merfin_qv_res, merfin_comp_res, compleasm_table, craq_aqi_bedgraph, yaml_weights_file):
                 # [ ...
                 # [ sample_id, [ ale_res ], [reapr_res], [busco_re_summary], [quast_res]],
                 # [ sample_id_B, [ ale_res_B ], [reapr_res_B], [busco_re_summary_B], [quast_res_B]]
@@ -170,13 +189,15 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
                 if len(my_list_ale) == len(my_list):
                     ale_file = my_list_ale[idx]
                     if Path(ale_file).exists():
-                        with open(ale_file) as infreapr:
+                        # with open(ale_file) as infreapr:
+                        with gzip.open(ale_file, 'rt') as infreapr:
                                 # for line in infreapr.readlines():
                                 for line in infreapr:
                                         match_score = re.match(r'#\sALE_score:\s(-\d+.\d+)', line)
                                         if match_score:
                                             ale_score = float(match_score.group(1))
                                             dict_sample['ale'] = float(ale_score)
+                                            dict_sample['neglike_ale'] = -1*float(ale_score)
 
 
                 # MATCH MERFIN RESULTS - COMPLETENESS
@@ -223,11 +244,25 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
 #                                                        line_list = line.split(" ")
 #                                                        dict_sample['ale'] = float(line_list[-1].strip('\n'))
                 # BEGIN - PARSING REAPR RESULTS
-                if len(my_list_reapr) == len(my_list):
-                    reapr_file = my_list_reapr[idx]
+                # if len(my_list_reapr) == len(my_list):
+                reapr_by_genome = defaultdict(list)
+                for gen in my_list:
+                    for reapr_file in my_list_reapr:
+                        if reapr_file.startswith(gen):
+                            reapr_by_genome[gen].append(reapr_file)
+
+                
+                # for gen, reapr_files in reapr_by_genome.items():
+                reapr_percentage_errors_total = 0
+                reapr_errors_total = 0
+                fcd_errors_total = 0
+                low_frag_errors_total = 0
+                for reapr_file in reapr_by_genome[my_list[idx]]:
+                    print("Parsing REAPR file: ", reapr_file, "for genome: ", my_list[idx])
+                # reapr_file = my_list_reapr[idx]
                     if Path(reapr_file).exists():
                         with open(reapr_file) as infreapr:
-                                # for line in infreapr.readlines():
+                            # for line in infreapr.readlines():
                                 for line in infreapr:
                                         match_percentage_errors = re.match(r'Error free bases:\s(\d+\.\d+)%', line)
                                         if match_percentage_errors:
@@ -241,10 +276,14 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
                                         match_low_frag_cov = re.match(r'Low fragment coverage within a contig:\s(\d+)', line)
                                         if match_low_frag_cov:
                                                 low_frag_errors = match_low_frag_cov.group(1)
-                        dict_sample['reapr_percentage_errors'] = reapr_percentage_errors
-                        dict_sample['reapr_total_errors'] = reapr_errors
-                        dict_sample['reapr_fcd'] = fcd_errors
-                        dict_sample['reapr_low'] = low_frag_errors
+                        reapr_percentage_errors_total += float(reapr_percentage_errors)
+                        reapr_errors_total += int(reapr_errors)
+                        fcd_errors_total += int(fcd_errors)
+                        low_frag_errors_total += int(low_frag_errors)
+                dict_sample['reapr_percentage_errors'] = reapr_percentage_errors_total
+                dict_sample['reapr_total_errors'] = reapr_errors_total
+                dict_sample['reapr_fcd'] = fcd_errors_total
+                dict_sample['reapr_low'] = low_frag_errors_total
                 # END - PARSING REAPR RESULTS
 #                        reapr_file = "evaluate_assembly/{}/reapr_results/05.summary.report.txt".format(pseudo_samp)
 #                        if path.exists(reapr_file):
@@ -279,15 +318,78 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
                     items.append(dict_appended)
                     items_classes.append(dict_classes)
         # print(items)
+        # Normalize ALE scores if they are present for all samples
         if len(my_list_ale) == len(my_list):
             ale_scores = []
+            reapr_total_errors_scores = []
+            reapr_fcd_scores = []
+            r_aqi_scores = []
+            s_aqi_scores = []
+            pct_frameshift_scores = []
+            pctcomplete_score = []
+            pctmissing_score = []
+            merfin_completeness_scores = []
+            contigs_scores = []
+            n50_scores = []
+            auN_scores = []
+            largest_scores = []
+            merfin_qv_ast_scores = []
             for it in items:
-                ale_scores.append(it['ale'])
+                ale_scores.append(it['neglike_ale'])
+                reapr_total_errors_scores.append(it['reapr_total_errors'])
+                reapr_fcd_scores.append(it['reapr_fcd'])
+                r_aqi_scores.append(it['R-AQI'])
+                s_aqi_scores.append(it['S-AQI'])
+                pct_frameshift_scores.append(float(it['pct_frameshift']))
+                pctcomplete_score.append(float(it['pctcomplete']))
+                pctmissing_score.append(float(it['pctmissing']))
+                merfin_completeness_scores.append(it['merfin_completeness'])
+                contigs_scores.append(it['contigs'])
+                n50_scores.append(it['n50'])
+                auN_scores.append(it['auN'])
+                largest_scores.append(it['largest'])
+                merfin_qv_ast_scores.append(it['merfin_qv_ast'])
             ale_scores = np.array(ale_scores)
+            reapr_total_errors_scores_array = np.array(reapr_total_errors_scores)
+            reapr_fcd_scores_array = np.array(reapr_fcd_scores)
+            r_aqi_scores_array = np.array(r_aqi_scores)
+            s_aqi_scores_array = np.array(s_aqi_scores)
+            pct_frameshift_scores_array = np.array(pct_frameshift_scores)
+            pctcomplete_score_array = np.array(pctcomplete_score)
+            pctmissing_score_array = np.array(pctmissing_score)
+            merfin_completeness_scores_array = np.array(merfin_completeness_scores)
+            contigs_scores_array = np.array(contigs_scores)
+            n50_scores_array = np.array(n50_scores)
+            auN_scores_array = np.array(auN_scores)
+            largest_scores_array = np.array(largest_scores)
+            merfin_qv_ast_scores_array = np.array(merfin_qv_ast_scores)
             for it in items:
                 # min-max normalization
+                # it['ale_norm'] = '{:.4f}'.format(((it['neglike_ale']-np.nanmin(ale_scores))/(np.nanmax(ale_scores)-np.nanmin(ale_scores))))
+                # normalization for when values are closer to a target (in this case 0) are best
+                # it['ale_norm'] = '{:.4f}'.format( 1 - ((np.abs(it['neglike_ale'] - 0)) / (np.abs(np.nanmax(ale_scores) - 0))))
+
+                # normalization for when closer values are better
+                it['ale_norm'] = normalization_closer(it['neglike_ale'], ale_scores, target=0, decimal_places=4)
+                it['R-AQI_norm'] = normalization_closer(it['R-AQI'], r_aqi_scores_array, target=100, decimal_places=4)
+                it['S-AQI_norm'] = normalization_closer(it['S-AQI'], s_aqi_scores_array, target=100, decimal_places=4)
+                it['pct_frameshift_norm'] = normalization_closer(float(it['pct_frameshift']), pct_frameshift_scores_array, target=100, decimal_places=4)
+                it['pctcomplete_norm'] = normalization_closer(float(it['pctcomplete']), pctcomplete_score_array, target=100, decimal_places=4)
+                it['pctmissing_norm'] = normalization_closer(float(it['pctmissing']), pctmissing_score_array, target=0, decimal_places=4)
+                it['merfin_completeness_norm'] = normalization_closer(it['merfin_completeness'], merfin_completeness_scores_array, target=100, decimal_places=4)   
+                it['merfin_qv_ast_norm'] = normalization_closer(it['merfin_qv_ast'], merfin_qv_ast_scores_array, target=100, decimal_places=4)
+
+                # normalization for when lower values are better
+                it['reapr_total_errors_norm'] = normalization_lower_best(it['reapr_total_errors'], reapr_total_errors_scores_array, decimal_places=4)
+                it['reapr_fcd_norm'] = normalization_lower_best(it['reapr_fcd'], reapr_fcd_scores_array, decimal_places=4)
+                it['contigs_norm'] = normalization_lower_best(it['contigs'], contigs_scores_array, decimal_places=4)
                 
-                it['ale_norm'] = '{:.2f}'.format(((it['ale']-np.nanmin(ale_scores))/(np.nanmax(ale_scores)-np.nanmin(ale_scores))))
+
+                # normalization for when higher values are better
+                it['pctcomplete_norm'] = normalization_max_best(it['pctcomplete'], pctcomplete_score_array, decimal_places=4)
+                it['n50_norm'] = normalization_max_best(it['n50'], n50_scores_array, decimal_places=4)
+                it['auN_norm'] = normalization_max_best(it['auN'], auN_scores_array, decimal_places=4)
+                it['largest_norm'] = normalization_max_best(it['largest'], largest_scores_array, decimal_places=4)
             # print(it['ale'])
         #myList = [list(col) for col in zip(*[d.values() for d in items])]
         #myList_argmax = np.argmax(myList, axis=1)
@@ -328,19 +430,22 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
 # 		with open(output[0], 'w') as outfile:
 # 				outfile.write(output_jinja2)
         # c = dict([(k,[a[k],b[k]]) for k in items])
-
+        
+        with open(yaml_weights_file, 'r') as file:
+            data_weights = yaml.safe_load(file)
+            print(data_weights)        
 
         c = pd.DataFrame(items)
         if busco:
-            if len(my_list_ale) == len(my_list) == len(my_list_reapr):
+            if len(my_list_ale) == len(my_list):
                 # {'name': 'Sample_AssemblerA', 'ale': -100937528.909207, 'reapr_total_errors': '402', 'reapr_fcd': '196', 'reapr_low': '206', 'genomesize': 4090859, 
                 # 'contigs': 2, 'n50': 4065161, 'largest': 4065161, 'pctcomplete': '6.2', 'pctsingle': '5.7', 'pctduplicated': '0.5', 'pctfragmented': '3.0', 'pctmissing': '90.8', 'total_busco_searched_genes': '758', 'ncomplete': '47', 'nsingle': '43', 'nduplicated': '4', 'nfragmented': '23', 'nmissing': '688'}, {'name': 'Sample_AssemblerB', 'ale': -100937528.909207, 'reapr_total_errors': '402', 'reapr_fcd': '196', 'reapr_low': '206', 'genomesize': 4090859, 'contigs': 2, 'n50': 4065161, 'largest': 4065161, 'pctcomplete': '6.2', 'pctsingle': '5.7', 'pctduplicated': '0.5', 'pctfragmented': '3.0', 'pctmissing': '90.8', 'total_busco_searched_genes': '758', 'ncomplete': '47', 'nsingle': '43', 'nduplicated': '4', 'nfragmented': '23', 'nmissing': '688'}
-                dict_names = {'name': 'Assembly', 'ale': 'ALE score (neglog)', 'reapr_total_errors': 'REAPR erros', 'reapr_fcd': 'REAPR fcd', 'reapr_low': 'REAPR low',
+                dict_names = {'name': 'Assembly', 'ale': 'ALE score', 'reapr_total_errors': 'REAPR erros', 'reapr_fcd': 'REAPR fcd', 'reapr_low': 'REAPR low',
                 'genomesize': 'Assembly length', 'contigs': 'contigs', 'n50': 'N50', 'largest': 'Largest contig', 'auN': 'auN',
                 'pctcomplete': 'BUSCO complete (%)', 'pctsingle': 'BUSCO single (%)', 'pctduplicated': 'BUSCO duplicated (%)', 'pctfragmented':'BUSCO fragmented (%)',
                 'pctmissing': 'BUSCO missing (%)',
                 'ncomplete': 'BUSCO complete', 'nsingle': 'BUSCO single', 'nduplicated': 'BUSCO duplicated',
-                    'nfragmented': 'BUSCO fragmented', 'nmissing': 'BUSCO missing','total_busco_searched_genes': 'BUSCO SEARCHED GENES', 'ale_norm':'ALE normalized',
+                    'nfragmented': 'BUSCO fragmented', 'nmissing': 'BUSCO missing','total_busco_searched_genes': 'BUSCO SEARCHED GENES',
                     'merfin_completeness': 'Merfin Completness','merfin_qv_ast': 'Merfin QV*', 'reapr_percentage_errors': 'Error-free bases (%)'}
             else:
                 dict_names = {'name': 'Assembly', 'genomesize': 'Assembly length', 'contigs': 'contigs', 'n50': 'N50', 'largest': 'Largest contig', 'auN': 'auN',
@@ -355,14 +460,14 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
             # c.columns = ['Assembly', 'ALE score (neglog)', 'REAPR erros', 'REAPR fcd', 'REAPR low',
             #  'Assembly length', 'contigs', 'N50', 'Largest contig', 'BUSCO complete (%)', 'BUSCO single (%)', 'BUSCO duplicated (%)', 'BUSCO fragmented (%)', 'BUSCO missing (%)', 'BUSCO complete', 'BUSCO single', 'BUSCO duplicated', 'BUSCO fragmented', 'BUSCO missing', 'ALE normalized']
         else:
-            if len(my_list_ale) == len(my_list) == len(my_list_reapr):
-                dict_names = {'name': 'Assembly', 'ale': 'ALE score (neglog)', 'reapr_total_errors': 'REAPR erros', 'reapr_fcd': 'REAPR fcd', 'reapr_low': 'REAPR low',
+            if len(my_list_ale) == len(my_list):
+                dict_names = {'name': 'Assembly', 'ale': 'ALE score', 'reapr_total_errors': 'REAPR erros', 'reapr_fcd': 'REAPR fcd', 'reapr_low': 'REAPR low',
              'genomesize': 'Assembly length', 'contigs': 'contigs', 'n50': 'N50', 'largest': 'Largest contig', 'auN': 'auN',
              'pctcomplete': 'COMPLEASM complete (%)', 'pctsingle': 'COMPLEASM single (%)', 'pctduplicated': 'COMPLEASM duplicated (%)', 'pctfragmented':'COMPLEASM fragmented Class I (%)', 'pctincomplete':'COMPLEASM fragmented Class II (%)',
               'pctmissing': 'COMPLEASM missing (%)',
                'ncomplete': 'COMPLEASM complete', 'nsingle': 'COMPLEASM single', 'nduplicated': 'COMPLEASM duplicated', 'nfragmented': 'COMPLEASM fragmented Class I', 
                'nincomplete': 'COMPLEASM fragmented Class II', 'nmissing': 'COMPLEASM missing','total_busco_searched_genes': 'COMPLEASM SEARCHED GENES',
-                'ale_norm':'ALE normalized', 'merfin_completeness': 'Merfin Completness','merfin_qv_ast': 'Merfin QV*', 'reapr_percentage_errors': 'Error-free bases (%)', 'pct_frameshift': 'Genes with Frameshift (%)', 'n_frameshift': 'Genes with Frameshift (N)'}
+                'merfin_completeness': 'Merfin Completness','merfin_qv_ast': 'Merfin QV*', 'reapr_percentage_errors': 'Error-free bases (%)', 'pct_frameshift': 'Genes with Frameshift (%)', 'n_frameshift': 'Genes with Frameshift (N)'}
             else:
                 dict_names = {'name': 'Assembly','genomesize': 'Assembly length', 'contigs': 'contigs', 'n50': 'N50', 'largest': 'Largest contig', 'auN': 'auN',
              'pctcomplete': 'COMPLEASM complete (%)', 'pctsingle': 'COMPLEASM single (%)', 'pctduplicated': 'COMPLEASM duplicated (%)', 'pctfragmented':'COMPLEASM fragmented Class I (%)', 'pctincomplete':'COMPLEASM fragmented Class II (%)',
@@ -407,9 +512,42 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
 
         score = np.mean(np.concatenate((scaler_df, scaler_sb_df), axis=1), axis=1)*100
 
-        data_read['Score'] = score
+        # data_read['Score'] = score
 
-        data_read = data_read.drop(columns=["Error-free bases (%)", "REAPR erros", "REAPR low"])
+        column_types = {
+            'correctness': {'cols': [], 'weights': []},
+            'contiguity': {'cols': [], 'weights': []},
+            'completeness': {'cols': [], 'weights': []},
+            'score': {'cols': [], 'weights': []}
+        }
+        
+        for type_error, weight in data_weights.items():
+            if type_error != 'score':
+                for metric in weight:
+                    metric_key, metric_value = list(metric.items())[0]
+                    column_types[type_error]['cols'].append(metric_key+"_norm")
+                    column_types[type_error]['weights'].append(float(metric_value))
+                if np.sum(column_types[type_error]['weights']) != 1:
+                    print(f"Error: The weights for metric {type_error} do not sum up to 1. Please check the YAML weights file.")
+                    break
+            else:
+                for metric in weight:
+                    print("METRIC:", list(metric.items()))
+                    metric_key, metric_value = list(metric.items())[0]
+                    print(metric_key, metric_value)
+                    column_types['score']['cols'].append("score_"+metric_key)
+                    column_types['score']['weights'].append(float(metric_value))
+                if np.sum(column_types['score']['weights']) != 1:
+                    print(f"Error: The weights for {type_error} do not sum up to 1. Please check the YAML weights file.")
+                    break
+        
+        data_read['score_correctness'] = np.average(data_read[column_types['correctness']['cols']], weights=column_types['correctness']['weights'], axis=1)*100
+        data_read['score_contiguity'] = np.average(data_read[column_types['contiguity']['cols']], weights=column_types['contiguity']['weights'], axis=1)*100
+        data_read['score_completeness'] = np.average(data_read[column_types['completeness']['cols']], weights=column_types['completeness']['weights'], axis=1)*100
+        # print(data_read[column_types['score']['cols']])
+        data_read['Score'] = np.average(data_read[column_types['score']['cols']], weights=column_types['score']['weights'], axis=1)
+
+        data_read = data_read.drop(columns=["Error-free bases (%)", "REAPR erros", "REAPR low"] + column_types['correctness']['cols'] + column_types['contiguity']['cols'] + column_types['completeness']['cols'] + ['neglike_ale'])
 
         data_read.to_csv(file_out, index=False, sep="\t")
 
@@ -546,6 +684,12 @@ def parse_args(argv=None):
     )
 
     parser.add_argument(
+        "--yaml-weights-file",
+        type=Path,
+        help="Path to the YAML file containing score weights.",
+    )
+
+    parser.add_argument(
         "-l",
         "--log-level",
         help="The desired log level (default WARNING).",
@@ -565,7 +709,7 @@ def main(argv=None):
     args.file_out.parent.mkdir(parents=True, exist_ok=True)
     # check_fasta(args.file_in, args.file_out)
     print(args)
-    parse_results_to_table(args.genomes_ids, args.ale_res, args.reapr_res, args.busco_re_summary, args.quast_res, args.file_out, args.busco, args.merfin_qv_res, args.merfin_comp_res, args.compleasm_table, args.craq_aqi_bedgraph)
+    parse_results_to_table(args.genomes_ids, args.ale_res, args.reapr_res, args.busco_re_summary, args.quast_res, args.file_out, args.busco, args.merfin_qv_res, args.merfin_comp_res, args.compleasm_table, args.craq_aqi_bedgraph, args.yaml_weights_file)
 
 
 if __name__ == "__main__":

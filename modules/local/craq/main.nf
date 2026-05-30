@@ -5,7 +5,7 @@ process CRAQ {
     // conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'https://depot.galaxyproject.org/singularity/craq:1.0.9--hdfd78af_0':
-        'quay.io/biocontainers/craq:1.10--hdfd78af_0' }"
+        'rodtheo/craq_fast:1.10--hdfd78af_0' }"
 
     input:
     tuple val(meta), path(asm)
@@ -35,7 +35,13 @@ process CRAQ {
     script: // This script is bundled with the pipeline, in nf-core/assemblyeval/bin/
     def prefix = task.ext.prefix ?: "${meta.id}"
     def args   = task.ext.args ?: ''
-    def craq_longreads = bam_longreads ? "-sms $bam_longreads" : ''
+    def long_read_technology = task.ext.long_read_technology ?: 'map-pb'
+    def craq_longreads = bam_longreads ? "-sms $bam_longreads -x $long_read_technology" : ''
+    
+    def intermediate_files = [
+        './*-craq/LRout',
+        './*-craq/SRout'
+    ]
     // def busco_config = config_file ? "--config $config_file" : ''
     // def compleasm_lineage = lineage.equals('auto') ? '--autolineage' : "-l ${lineage}"
     // def busco_lineage_dir = busco_lineages_path ? "--download_path ${busco_lineages_path}" : ''
@@ -47,6 +53,9 @@ process CRAQ {
         $craq_longreads \\
         $args \\
         --output_dir ${prefix}-craq
+
+    # clean-up
+    rm -rf ${intermediate_files.join(' ')}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

@@ -12,6 +12,8 @@ process HEADER_FASTA_REAPR {
 
     output:
     tuple val(meta), path('*_header_valid.fasta'), emit: asm
+    tuple val(meta), path('*_header_valid--*.fasta'), emit: asm_chr
+    tuple val(meta), path('*_header_valid--*.bed'), emit: asm_bed
     path "versions.yml", emit: versions
 
     when:

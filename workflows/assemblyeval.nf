@@ -165,7 +165,7 @@ workflow ASSEMBLYEVAL {
 
     if (!params.skip_correctness) {
         CORRECTNESS_ASM (
-        READ_MAPPING.out.joined_asm_bam, READ_MAPPING.out.asm, READ_MAPPING.out.bam, READ_MAPPING.out.bai, longreads_ch
+        READ_MAPPING.out.joined_asm_bam, READ_MAPPING.out.asm, READ_MAPPING.out.bam, READ_MAPPING.out.bai, READ_MAPPING.out.shortreads_ch, longreads_ch
         )
     }
     
@@ -224,8 +224,10 @@ workflow ASSEMBLYEVAL {
     // // out_table_ch = Channel.fromPath("out_table.csv")
     
     // COMPLETENESS_ASM.out.busco_short_summaries_txt.view{ "REAPR: $it" }
+
+    weights_yaml_ch = Channel.fromPath(params.yaml_weights_file, checkIfExists: true)
     
-    PARSE_RESULTS ( out_asm_ch, out_ale_ch, out_reapr_ch, out_busco_re_summary_ch, out_quast_ch, out_merfin_qv_ch, out_merfin_completeness_ch, out_compleasm_ch, out_craq_ch )
+    PARSE_RESULTS ( out_asm_ch, out_ale_ch, out_reapr_ch, out_busco_re_summary_ch, out_quast_ch, out_merfin_qv_ch, out_merfin_completeness_ch, out_compleasm_ch, out_craq_ch, weights_yaml_ch )
     // PARSE_RESULTS.out.res.view{ "\n\nRESULTS ARE IN: $it"}
 
     // // // CORRECTNESS_ASM.out.reapr.collect( {it[1]}, sort: {it.getName()} ).set{ new_collect }
@@ -289,12 +291,13 @@ workflow ASSEMBLYEVAL {
     // ch_multiqc_files = ch_multiqc_files.mix(Channel.fromPath("$projectDir/assets/"))
 
 
-    KMER_PROFILE.out.merqury_cn.map{ meta, cn_spectra -> [['to_join': meta.get("to_join")], meta, cn_spectra] }.set{ to_jinja_merqury_ch }
-    view{ "MERQURY CN: $it" }
+    // KMER_PROFILE.out.merqury_cn.map{ meta, cn_spectra -> [['to_join': meta.get("to_join")], meta, cn_spectra] }.set{ to_jinja_merqury_ch }
+    // view{ "MERQURY CN: $it" }
 
-    KMER_PROFILE.out.genomescope2_res.map{ meta, gs_ln, gs_fitted -> [['to_join': meta.get('id')], meta, gs_ln, gs_fitted] }.set{ to_jinja_genscope_ch }
+    // KMER_PROFILE.out.genomescope2_res.map{ meta, gs_ln, gs_fitted -> [['to_join': meta.get('id')], meta, gs_ln, gs_fitted] }.set{ to_jinja_genscope_ch }
+    KMER_PROFILE.out.genomescope2_res.map{ meta, gs_ln, gs_fitted -> [meta, gs_ln, gs_fitted] }.set{ to_jinja_samp_ch }
 
-    to_jinja_genscope_ch.combine(to_jinja_merqury_ch, by: [0]).map{ meta_join, meta, gs_ln , gs_fitted, meta_mq, cn_spectra -> [meta_mq, gs_ln, cn_spectra] }.set{ to_jinja_samp_ch }
+    // to_jinja_genscope_ch.combine(to_jinja_merqury_ch, by: [0]).map{ meta_join, meta, gs_ln , gs_fitted, meta_mq, cn_spectra -> [meta_mq, gs_ln, cn_spectra] }.set{ to_jinja_samp_ch }
 
     Channel.fromPath("$projectDir/assets/template_mqc.html").combine(to_jinja_samp_ch).set{ to_jinja_ch }
 
