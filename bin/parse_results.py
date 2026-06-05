@@ -138,7 +138,7 @@ def parse_compleasm(out_short_summary, compleasm_table):
 
     return(dict_busco)
 
-def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, quast_res, file_out, busco, merfin_qv_res, merfin_comp_res, compleasm_table, craq_aqi_bedgraph, yaml_weights_file):
+def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, quast_res, file_out, busco, merfin_qv_res, merfin_comp_res, compleasm_table, craq_aqi_bedgraph, yaml_weights_file, previous_tables=None):
                 # [ ...
                 # [ sample_id, [ ale_res ], [reapr_res], [busco_re_summary], [quast_res]],
                 # [ sample_id_B, [ ale_res_B ], [reapr_res_B], [busco_re_summary_B], [quast_res_B]]
@@ -319,6 +319,15 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
                     items_classes.append(dict_classes)
         # print(items)
         # Normalize ALE scores if they are present for all samples
+
+        # Load previous tables and convert rows to dicts with internal keys
+        prev_items = []
+        for prev_file in (previous_tables or []):
+            df_prev = pd.read_csv(prev_file, sep="\t", header=0, index_col=False)
+            data_list = df_prev.to_dict(orient='records')
+            prev_items.extend(data_list)
+
+        items = prev_items + items  # Combine previous items with current items
         if len(my_list_ale) == len(my_list):
             ale_scores = []
             reapr_total_errors_scores = []
@@ -436,6 +445,8 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
             print(data_weights)        
 
         c = pd.DataFrame(items)
+        file_out_csv_base = Path(file_out).with_suffix('.base.tsv')
+        c.to_csv(file_out_csv_base, sep="\t", index=False)
         if busco:
             if len(my_list_ale) == len(my_list):
                 # {'name': 'Sample_AssemblerA', 'ale': -100937528.909207, 'reapr_total_errors': '402', 'reapr_fcd': '196', 'reapr_low': '206', 'genomesize': 4090859, 
@@ -479,9 +490,11 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
         # c.to_excel("evaluate_assembly/results.xlsx", index=False)
         
 
-        c.to_csv(file_out, index=False, sep="\t")
+        file_out_tsv = Path(file_out).with_suffix('.renamed.tsv')
+        c.to_csv(file_out_tsv, index=False, sep="\t")
 
-        data_read = pd.read_csv(file_out, sep="\t", header=0, index_col=False)
+        data_read = pd.read_csv(file_out_tsv, sep="\t", header=0, index_col=False)
+
         if busco:
             if len(my_list_ale) == len(my_list) == len(my_list_reapr):
                 greater_better = ['Merfin QV*', 'Error-free bases (%)', 'BUSCO complete (%)', 'BUSCO single (%)', 'auN', 'Merfin Completness']
@@ -696,6 +709,15 @@ def parse_args(argv=None):
         choices=("CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"),
         default="WARNING",
     )
+
+    parser.add_argument(
+        "--previous_tables",
+        nargs="+",
+        metavar="PREVIOUS_TABLES",
+        type=Path,
+        default=[],
+        help="List of previous TSV output files to concatenate before normalization.",
+    )
     return parser.parse_args(argv)
 
 
@@ -709,7 +731,7 @@ def main(argv=None):
     args.file_out.parent.mkdir(parents=True, exist_ok=True)
     # check_fasta(args.file_in, args.file_out)
     print(args)
-    parse_results_to_table(args.genomes_ids, args.ale_res, args.reapr_res, args.busco_re_summary, args.quast_res, args.file_out, args.busco, args.merfin_qv_res, args.merfin_comp_res, args.compleasm_table, args.craq_aqi_bedgraph, args.yaml_weights_file)
+    parse_results_to_table(args.genomes_ids, args.ale_res, args.reapr_res, args.busco_re_summary, args.quast_res, args.file_out, args.busco, args.merfin_qv_res, args.merfin_comp_res, args.compleasm_table, args.craq_aqi_bedgraph, args.yaml_weights_file, args.previous_tables)
 
 
 if __name__ == "__main__":

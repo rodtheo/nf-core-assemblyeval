@@ -5,7 +5,8 @@ process COMPLEASM {
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'https://depot.galaxyproject.org/singularity/compleasm:0.2.6--pyh7cba7a3_0':
-        'quay.io/biocontainers/compleasm:0.2.7--pyh7e72e81_1' }"
+        // 'quay.io/biocontainers/compleasm:0.2.7--pyh7e72e81_1' }"
+        'docker.io/rodtheo/compleasm:0.2.7--pyh7e72e81_1' }"
 
     input:
     tuple val(meta), path(asm)
@@ -28,7 +29,7 @@ process COMPLEASM {
     def prefix = task.ext.prefix ?: "${meta.id}-${lineage}"
     def args   = task.ext.args ?: ''
     // def busco_config = config_file ? "--config $config_file" : ''
-    def compleasm_lineage = lineage.equals('auto') ? '--autolineage' : "-l ${lineage}"
+    def compleasm_lineage = lineage.equals('auto') ? '--autolineage' : "--lineage ${lineage}"
     // def busco_lineage_dir = busco_lineages_path ? "--download_path ${busco_lineages_path}" : ''
     def intermediate_files = [
         './*-compleasm/hmmer_output',

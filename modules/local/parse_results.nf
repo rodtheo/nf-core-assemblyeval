@@ -26,6 +26,7 @@ process PARSE_RESULTS {
 
     output:
     tuple val(meta), path('table_data_mqc.out'), emit: res
+    tuple val(meta), path('table_data_mqc.base.tsv'), emit: res_tsv
     path "versions.yml", emit: versions
 
     when:
