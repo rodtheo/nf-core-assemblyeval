@@ -3,6 +3,7 @@
   "name": "ALE-raw-depth",
   "format": "bedgraph",
   "url": "{{ page.ale_wig_base }}",
+  "indexURL": "{{ page.ale_wig_base }}.tbi",
   "color": "red",
   "guideLines": [
     {"color": "green", "dotted": true, "y": 0}
@@ -17,6 +18,7 @@
   "name": "ALE-depth",
   "format": "bedgraph",
   "url": "{{ page.ale_wig_depth }}",
+  "indexURL": "{{ page.ale_wig_depth }}.tbi",
   "color": "red",
   "guideLines": [
     {"color": "green", "dotted": true, "y": 0}
@@ -31,6 +33,7 @@
   "name": "ALE-insert",
   "format": "bedgraph",
   "url": "{{ page.ale_wig_insert }}",
+  "indexURL": "{{ page.ale_wig_insert }}.tbi",
   "color": "red",
   "guideLines": [
     {"color": "green", "dotted": true, "y": 0}
@@ -45,6 +48,7 @@
   "name": "ALE-kmer",
   "format": "bedgraph",
   "url": "{{ page.ale_wig_kmer }}",
+  "indexURL": "{{ page.ale_wig_kmer }}.tbi",
   "color": "red",
   "guideLines": [
     {"color": "green", "dotted": true, "y": 0}
@@ -59,6 +63,7 @@
   "name": "ALE-place",
   "format": "bedgraph",
   "url": "{{ page.ale_wig_place }}",
+  "indexURL": "{{ page.ale_wig_place }}.tbi",
   "color": "red",
   "guideLines": [
     {"color": "green", "dotted": true, "y": 0}
@@ -73,6 +78,7 @@
   "name": "REAPR",
   "format": "bedgraph",
   "url": "{{ page.reapr_score_per_base }}",
+  "indexURL": "{{ page.reapr_score_per_base }}.tbi",
   "color": "red",
   "guideLines": [
     {"color": "green", "dotted": true, "y": 0}
@@ -89,6 +95,7 @@
   "name": "CRAQ-AQI",
   "format": "bedgraph",
   "url": "{{ page.craq_aqi_bedgraph }}",
+  "indexURL": "{{ page.craq_aqi_bedgraph }}.tbi",
   "color": "red",
   "guideLines": [
     {"color": "green", "dotted": true, "y": 0}
