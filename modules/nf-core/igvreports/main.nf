@@ -4,8 +4,8 @@ process IGVREPORTS {
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://depot.galaxyproject.org/singularity/igv-reports:1.14.1--pyh7e72e81_0':
-        'quay.io/biocontainers/igv-reports:1.14.1--pyh7e72e81_0' }"
+        'https://depot.galaxyproject.org/singularity/igv-reports:1.16.0--pyh7e72e81_0':
+        'quay.io/biocontainers/igv-reports:1.16.0--pyh7e72e81_0' }"
 
     input:
     tuple val(meta), path(sites), path(tracks), path(tracks_indicies)
