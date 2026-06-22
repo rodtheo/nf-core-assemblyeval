@@ -2,7 +2,7 @@
 
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import MinMaxScaler
+# from sklearn.preprocessing import MinMaxScaler
 import argparse
 import logging
 import sys
@@ -18,7 +18,13 @@ logger = logging.getLogger()
 def normalization_max_best(input_value, input_array, decimal_places=4):
     # min-max normalization
     # print(f"{num:.4f}")  # Output: 3.1416
-    res = ((input_value-np.nanmin(input_array))/(np.nanmax(input_array)-np.nanmin(input_array)))
+    min_val = np.nanmin(input_array)
+    max_val = np.nanmax(input_array)
+
+    if max_val == min_val:
+        res = 0.0 # "max_best" → valor neutro/mínimo (será invertido para 1.0 no lower_best)
+    else:
+        res = ((input_value-np.nanmin(input_array))/(np.nanmax(input_array)-np.nanmin(input_array)))
     return f"{res:.{decimal_places}f}"
 
 def normalization_closer(input_value, input_array, target=0, decimal_places=4):
@@ -394,6 +400,7 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
                 it['contigs_norm'] = normalization_lower_best(it['contigs'], contigs_scores_array, decimal_places=4)
                 
 
+
                 # normalization for when higher values are better
                 it['pctcomplete_norm'] = normalization_max_best(it['pctcomplete'], pctcomplete_score_array, decimal_places=4)
                 it['n50_norm'] = normalization_max_best(it['n50'], n50_scores_array, decimal_places=4)
@@ -511,19 +518,19 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
                 smaller_better = ['COMPLEASM duplicated (%)', 'COMPLEASM fragmented Class I (%)', 'COMPLEASM fragmented Class II (%)', 'COMPLEASM missing (%)', 'Genes with Frameshift (%)', 'Genes with Frameshift (N)']
         complement = data_read[smaller_better].max(axis=0)
 
-        print("SMAAAAAAAAAAAAAAAAALLLLLLLLLERRRRRRRRRRRRRR", data_read[smaller_better])
-        print(complement)
-        scaler_sb = MinMaxScaler()
-        subset_sb = complement.sub(data_read[smaller_better])
-        scaler_sb.fit(subset_sb)
-        scaler_sb_df = scaler_sb.transform(subset_sb)
-        # scaler_sb_df
+        # print("SMAAAAAAAAAAAAAAAAALLLLLLLLLERRRRRRRRRRRRRR", data_read[smaller_better])
+        # print(complement)
+        # scaler_sb = MinMaxScaler()
+        # subset_sb = complement.sub(data_read[smaller_better])
+        # scaler_sb.fit(subset_sb)
+        # scaler_sb_df = scaler_sb.transform(subset_sb)
+        # # scaler_sb_df
 
-        scaler = MinMaxScaler()
-        scaler.fit(data_read[greater_better])
-        scaler_df = scaler.transform(data_read[greater_better])
+        # scaler = MinMaxScaler()
+        # scaler.fit(data_read[greater_better])
+        # scaler_df = scaler.transform(data_read[greater_better])
 
-        score = np.mean(np.concatenate((scaler_df, scaler_sb_df), axis=1), axis=1)*100
+        # score = np.mean(np.concatenate((scaler_df, scaler_sb_df), axis=1), axis=1)*100
 
         # data_read['Score'] = score
 
@@ -559,6 +566,8 @@ def parse_results_to_table(genomes_ids, ale_res, reapr_res, busco_re_summary, qu
         data_read['score_completeness'] = np.average(data_read[column_types['completeness']['cols']], weights=column_types['completeness']['weights'], axis=1)*100
         # print(data_read[column_types['score']['cols']])
         data_read['Score'] = np.average(data_read[column_types['score']['cols']], weights=column_types['score']['weights'], axis=1)
+
+        print("SCORES CONTIGUITY:", data_read[column_types['contiguity']['cols']], data_read['score_contiguity'])
 
         data_read = data_read.drop(columns=["Error-free bases (%)", "REAPR erros", "REAPR low"] + column_types['correctness']['cols'] + column_types['contiguity']['cols'] + column_types['completeness']['cols'] + ['neglike_ale'])
 
