@@ -1,9 +1,9 @@
 correctness:
-  - ale: 0.2
-  - reapr_fcd: 0.2
+  - ale: 0.1
+  - reapr_fcd: 0.4
   - R-AQI: 0.1
   - S-AQI: 0.1
-  - pct_frameshift: 0.2
+  - pct_frameshift: 0.1
   - merfin_qv_ast: 0.2
 completeness:
   - pctcomplete: 0.4
