@@ -38,7 +38,7 @@ workflow CONTAMINATION_ASM {
 	version_ch.mix(FCS_FCSADAPTOR.out.versions).set{ version_ch }
 
 	// dbgx_ch = Channel.fromPath('./data/fcs-database')
-	dbgx_ch = Channel.fromPath('/home/rodtheo/Bioinfo/data/fcs-database')
+	dbgx_ch = Channel.fromPath(params.fcs_database)
 
 	reference_ch.combine( dbgx_ch ).multiMap{ meta, asm, db_path ->
 		assembly: [meta, asm]
