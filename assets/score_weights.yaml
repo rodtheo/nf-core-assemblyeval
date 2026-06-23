@@ -6,9 +6,9 @@ correctness:
   - pct_frameshift: 0.1
   - merfin_qv_ast: 0.2
 completeness:
-  - pctcomplete: 0.4
-  - pctmissing: 0.3
-  - merfin_completeness: 0.3
+  - pctcomplete: 0.5
+  - pctmissing: 0.4
+  - merfin_completeness: 0.1
 contiguity:
   - contigs: 0.2
   - n50: 0.2
