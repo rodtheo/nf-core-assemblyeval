@@ -15,6 +15,6 @@ contiguity:
   - auN: 0.4
   - largest: 0.2
 score:
-  - correctness: 0.7
-  - completeness: 0.2
+  - correctness: 0.6
+  - completeness: 0.4
   - contiguity: 0.1
