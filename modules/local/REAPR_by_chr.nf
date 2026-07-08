@@ -1,6 +1,6 @@
 process REAPR_BY_CHR {
     tag "$meta.id"
-    label 'process_single'
+    label 'process_single_long'
     errorStrategy 'ignore'
 
     // conda "${moduleDir}/environment.yml"

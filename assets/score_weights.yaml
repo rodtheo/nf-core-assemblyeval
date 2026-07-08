@@ -16,5 +16,5 @@ contiguity:
   - largest: 0.2
 score:
   - correctness: 0.55
-  - completeness: 0.45
+  - completeness: 0.40
   - contiguity: 0.05
