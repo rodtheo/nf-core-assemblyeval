@@ -166,7 +166,7 @@ Prepare an `assemblysheet.yaml` with the following fields:
 - **`ont`**: long reads file path. For PacBio data, pass `--map-pb` when running the pipeline.
 
 
-Below is an example [`assemblysheet.yaml`](assets/chla_test_input_channels.yaml) evaluating four assemblies of *C. trachomatis*:
+Below is an example [`assemblysheet.yaml`](https://github.com/rodtheo/nf-core-assemblyeval/blob/master/assets/chla_test_input_channels.yaml) evaluating four assemblies of *C. trachomatis*:
 
 ```yaml
 samples:
@@ -213,7 +213,7 @@ Once the pipeline completes, the main outputs are:
 > [!WARNING]
 > Provide pipeline parameters via the CLI or `--params-file`. The `-c` Nextflow option handles configuration only and **cannot** set pipeline parameters. See [docs](https://nf-co.re/usage/configuration#custom-configuration-files).
 
-For more details, see the [usage documentation](https://nf-co.re/assemblyeval/usage) and [parameter documentation](https://nf-co.re/assemblyeval/parameters).
+For more details, see the [usage documentation](https://github.com/rodtheo/nf-core-assemblyeval/blob/master/docs/usage.md) and [parameter documentation](https://github.com/rodtheo/nf-core-assemblyeval/blob/master/docs/parameters.md).
 
 ## Pipeline output
 
@@ -222,7 +222,7 @@ To see the results of an example test run with a full size dataset refer to the 
 After the pipeline finishes, the main outputs are self-contained HTML located at `<OUTDIR>/multiqc/` and `<OUTDIR>/igvreport/`.
 
 For more details about the output files and reports, please refer to the
-[output documentation]().
+[output documentation](https://github.com/rodtheo/nf-core-assemblyeval/blob/master/docs/output.md).
 
 ## Disclaimer
 
