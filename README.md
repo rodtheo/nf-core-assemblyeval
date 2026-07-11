@@ -19,53 +19,154 @@
 
 ## Introduction
 
-**nf-core/assemblyeval** is a bioinformatics pipeline that applies the four C’s genome assembly quality check procedure evaluating contamination, contiguity, completeness and correctness. Furthermore, due to errors that can be introduced by the sequencing technology or the assembly tool used, it is important at the end of pipeline’s run to inspect more assertively candidate misjoined regions. Therefore, in addition to producing a detailed comparative report showing numerous metrics and graphics evaluating the quality of the assemblies, the pipeline provides an interactive report showing candidate assembly errors at the single-nucleotide level. 
+**Assemblyeval** accepts genome assemblies (FASTA), paired-end Illumina reads, and long reads (ONT or PacBio) via a YAML samplesheet, optionally cleaning them of contamination before evaluation. The pipeline systematically assesses contiguity (QUAST), completeness (COMPLEASM/BUSCO, Merfin), and correctness (ALE, REAPR, CRAQ) — combining read-alignment-based and k-mer-based evidence into a single normalized weighted score. Final outputs include a comparative MultiQC report ranking assemblies across all metrics and an IGV-based interactive report for manual inspection of putative structural errors.
 
 
-![pipeline](assets/assembly-eval-pipeline-v5.png)
+<!-- ![pipeline](assets/assembly-eval-pipeline-v5.png) -->
 
+```mermaid
+flowchart TD
+    INPUT[/"YAML file describing inputs (relevant metadata about the sample, assemblies in FASTA, short and long reads in FASTQ)"/]:::yellow
+    INPUT --> PREPARE["PREPARE_INPUT\nassemblies · illumina · long reads"]
 
-<!-- TODO nf-core:
-   Complete this sentence with a 2-3 sentence summary of what types of data the pipeline ingests, a brief overview of the
-   major pipeline sections and the types of output it produces. You're giving an overview to someone new
-   to nf-core here, in 15-20 seconds. For an example, see https://github.com/nf-core/rnaseq/blob/master/README.md#introduction
--->
+    PREPARE -->|"Illumina reads"| FASTQC["🔘 FASTQC"]
+    PREPARE --> SKIP_CONT{"--skip_contamination?"}:::white
+
+    SKIP_CONT -->|"no"| FCS_A["🔴 FCS_FCSADAPTOR\nadapter screen"]
+    FCS_A --> FCS_G["🔴 FCS_FCSGX\nforeign genome screen"]
+    FCS_G --> FCS_C["🔴 FCS_CLEAN\nremove contaminants"]
+    FCS_C --> ASMS(("Assemblies (ASMs)")):::white
+    SKIP_CONT -->|"yes"| ASMS
+
+    ASMS --> COMP_BRANCH{"--busco?"}:::white
+    COMP_BRANCH -->|"true"| BUSCO["🟢 BUSCO_BUSCO"]
+    COMP_BRANCH -->|"false (default)"| COMPLEASM["🟢🔵 COMPLEASM"]
+
+    ASMS --> QUAST["🟡 QUAST\ncontiguity stats"]
+
+    ASMS -->|"+ short reads"| BWA["BWAMEM2_INDEX\nBWAMEM2_MEM\nread alignment"]
+	ASMS -->|"+ long reads"| MINIMAP2["MINIMAP2 alignment"]
+    BWA --> SAMTOOLS["SAMTOOLS_SORT\nSAMTOOLS_INDEX"]
+
+    SAMTOOLS --> REAPR_BRANCH{"--reapr_by_chr?"}:::white
+    ASMS --> REAPR_BRANCH
+    REAPR_BRANCH -->|"false (default)"| HDR["HEADER_FASTA_REAPR\nsanitize FASTA headers"]
+    HDR --> REAPR["🔵 REAPR\nwhole-genome error detection"]
+    REAPR_BRANCH -->|"true"| HDR_CHR["HEADER_FASTA_REAPR\nsanitize + split by chr"]
+    HDR_CHR --> BED_INT["BEDTOOLS_INTERSECT\nsubset BAM per chromosome"]
+    BED_INT --> REAPR_CHR["🔵 REAPR_BY_CHR\nper-chromosome error detection"]
+
+    SAMTOOLS -->|"BAM + BAI + ASM"| ALE["🔵 ALE\nassembly likelihood score"]
+    SAMTOOLS -->|"BAM + BAI + ASM"| CRAQ["🔵 CRAQ\nstructural error detection"]
+	MINIMAP2 --> CRAQ
+
+    ASMS -->|"+ Illumina reads"| MERYL["🟣 MERYL_COUNT\nMERYL_HISTOGRAM"]
+    MERYL --> GS2["🟣 GENOMESCOPE2\ngenome profiling"]
+    GS2 --> MERFIN["🟢🔵 MERFIN\nQV* + completeness"]
+
+    ALE --> ALE_WIG["ALE_TO_WIGGLE\n5 WIG tracks: base · depth · insert · kmer · place"]
+    ALE_WIG --> WIG_BG["UCSC_WIGTOBEDGRAPH + TABIX"]
+
+    REAPR --> REAPR_BG["REAPER_BEDGRAPH + TABIX\nper-base REAPR score"]
+    REAPR_CHR --> REAPR_BG
+
+    CRAQ --> CRAQ_TAB["BEDTOOLS_SORT + TABIX\nregional AQI bedgraph"]
+
+    WIG_BG --> SUB_REAPR["🔘 SUBSET_REAPR\nfilter REAPR failure regions"]
+    REAPR_BG --> SUB_REAPR
+    CRAQ_TAB --> SUB_REAPR
+
+    SUB_REAPR --> PREP_IGV["🔘 PREPARE_REPORT_IGV\ntrack config JSON"]
+    PREP_IGV --> IGVREPORTS["🔘 IGVREPORTS"]
+
+    BUSCO --> PARSE["🔘 PARSE_RESULTS\nnormalize metrics · compute weighted score\nscore_weights.yaml"]
+    COMPLEASM --> PARSE
+    QUAST --> PARSE
+    ALE --> PARSE
+    REAPR --> PARSE
+    REAPR_CHR --> PARSE
+    CRAQ --> PARSE
+    MERFIN --> PARSE
+
+    FASTQC --> MULTIQC["🔘 MULTIQC"]
+    PARSE --> MULTIQC
+
+    MULTIQC --> OUT1[/"multiqc/\nMain HTML Report"/]:::orange
+    IGVREPORTS --> OUT2[/"igvreports/\nPer-assembly IGV Report"/]:::orange
+
+    subgraph Legenda
+        direction LR
+        L1["🟢 Completeness"]
+        L2["🔴 Contamination"]
+        L3["🟡 Contiguity"]
+        L4["🔵 Correctness"]
+        L5["🟣 KMER_MODULE"]
+        L6["🔘 Output"]
+    end
+
+    classDef white fill:#ffffff,stroke:#000000,color:#000000
+    classDef yellow fill:#FFFF00,stroke:#000000,color:#000000
+    classDef orange fill:#EDC001,stroke:#000000,color:#000000
+```
 
 <!-- TODO nf-core: Include a figure that guides the user through the major workflow steps. Many nf-core
      workflows use the "tube map" design for that. See https://nf-co.re/docs/contributing/design_guidelines#examples for examples.   -->
 <!-- TODO nf-core: Fill in short bullet-pointed list of the default steps in the pipeline -->
 
-1. Read QC ([`FastQC`](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/))
-2. Removal of contaminants (_Optional_):
-    1. Removal of adptor/vector contaminants ([`FCS-adaptor`])
-    2. Removal of genome contaminants ([`FCS-GX`])
-    3. Generate a clean assembly excluding contaminants ([`FCS-CLEAN`])
-3. Module 
-4. TO DO
+1. Parse and prepare input samplesheet (`PREPARE_INPUT`: assemblies · Illumina reads · long reads)
+2. Read QC ([`FastQC`](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/))
+3. Contamination screening and removal (_Optional_, `--skip_contamination`):
+   1. Adapter/vector screen ([`FCS-adaptor`](https://github.com/ncbi/fcs))
+   2. Foreign genome screen ([`FCS-GX`](https://github.com/ncbi/fcs))
+   3. Generate cleaned assembly ([`FCS-CLEAN`](https://github.com/ncbi/fcs))
+4. Contiguity assessment ([`QUAST`](https://github.com/ablab/quast))
+5. Completeness assessment (choice of):
+   1. [`COMPLEASM`](https://github.com/huangnengCSU/compleasm) _(default)_
+   2. [`BUSCO`](https://busco.ezlab.org/) _(optional, `--busco`)_
+6. K-mer profiling and QV estimation:
+   1. K-mer counting ([`Meryl`](https://github.com/marbl/meryl))
+   2. Genome profiling ([`GenomeScope2`](https://github.com/tbenavi1/genomescope2.0))
+   3. K-mer completeness and QV* score ([`Merfin`](https://github.com/arangrhie/merfin))
+7. Short-read alignment to assemblies ([`BWA-MEM2`](https://github.com/bwa-mem2/bwa-mem2), [`SAMtools`](https://www.htslib.org/))
+8. Long-read alignment to assemblies ([`Minimap2`](https://github.com/lh3/minimap2))
+Here's the corrected item 9:
 
+9. Correctness assessment:
+   1. Assembly likelihood score ([`ALE`](https://github.com/sc932/ALE)) — evaluates short-read alignments using a Bayesian framework to compute a global log-probability score that the assembly is correct, integrating four per-nucleotide metrics: alignment concordance, insert size consistency, depth of coverage uniformity, and k-mer frequency
+   2. Structural error detection ([`CRAQ`](https://github.com/bioinfo-biols/CRAQ)) — uses clipped (split-mapped) short- and long-read alignments to identify regional and structural errors, reporting a Regional Assembly Quality Index (R-AQI) and a Structural Assembly Quality Index (S-AQI) on a 0–100 scale
+   3. Error region detection via Fragment Coverage Distribution ([`REAPR`](https://www.sanger.ac.uk/tool/reapr/)) — evaluates the discrepancy between observed paired-read mapping coverage and theoretical expectations (FCD error), scoring each base from 0 to 1 based on read orientation, insert size consistency, and soft-clipping evidence; two run modes are supported:
+      1. Whole-assembly mode _(default)_ — runs REAPR across the entire assembly at once
+      2. Per-contig mode _(optional, `--reapr_by_chr true`)_ — splits the assembly by contig/chromosome, subsets the BAM accordingly with [`BEDTools`](https://github.com/arq5x/bedtools2/), and runs REAPR independently per contig; recommended for large assemblies (>500 Mbp)
+10. Convert correctness scores to indexed BEDGraph tracks ([`UCSC wigToBedGraph`](http://hgdownload.soe.ucsc.edu/admin/exe/), [`Tabix`](https://www.htslib.org/), [`BEDTools`](https://github.com/arq5x/bedtools2/))
+11. Filter and prepare candidate misassembly regions for visualization (`SUBSET_REAPR`, `PREPARE_REPORT_IGV`)
+12. Generate interactive per-assembly error report ([`IGV-Reports`](https://github.com/igvteam/igv-reports))
+13. Aggregate metrics, compute weighted ranking scores and present QC ([`MultiQC`](http://multiqc.info/))
+
+> [!WARNING]
+> The contamination module requires the pre-download of the **FCS-GX database**, which demands a substantial amount of disk space and a **minimum of 512 GB of RAM** for full-performance execution. Running with less memory is possible but may result in up to a **10,000× performance penalty**. For this reason, we strongly recommend running the contamination steps (`--skip_contamination false`) only on **HPC (High-Performance Computing)** environments.
+>
+> If you do not have access to HPC infrastructure, you can run **FCS-GX online via Galaxy** — [ncbi_fcs_gx on Galaxy](https://usegalaxy.org/?tool_id=toolshed.g2.bx.psu.edu%2Frepos%2Fiuc%2Fncbi_fcs_gx%2Fncbi_fcs_gx%2F0.5.0%2Bgalaxy0&version=latest) — and then use the resulting decontaminated FASTA file as input to **nf-core/assemblyeval** with `--skip_contamination`.
 
 ## Usage
 
 > [!NOTE]
 > If you are new to Nextflow and nf-core, please refer to [this page](https://nf-co.re/docs/usage/installation) on how to set-up Nextflow. Make sure to [test your setup](https://nf-co.re/docs/usage/introduction#how-to-run-a-pipeline) with `-profile test` before running the workflow on actual data.
 
-<!-- TODO nf-core: Describe the minimum required steps to execute the pipeline, e.g. how to prepare samplesheets.
-     Explain what rows and columns represent. For instance (please edit as appropriate):
+Prepare an `assemblysheet.yaml` with the following fields:
 
-First, prepare a samplesheet with your input data that looks as follows:
+- **`metadata`**: organism-level metadata shared across assemblies:
+  - `id`: sample or organism name
+  - `kmer_size`: k-mer size for tools like `Meryl`
+  - `ploidy`: ploidy level
+  - `organism_domain`: `euk` or `prok`
+  - `taxid`: NCBI taxonomy ID
+  - `busco_lineages`: BUSCO lineage(s) for completeness evaluation
+- **`assembly`**: one or more assemblies to evaluate. Each entry requires a unique `id` (no spaces) and `pri_asm` with the path to the FASTA file.
+- **`illumina`**: paired-end Illumina reads (`read1` and `read2`).
+- **`ont`**: long reads file path. For PacBio data, pass `--map-pb` when running the pipeline.
 
-`samplesheet.csv`:
 
-```csv
-sample,fastq_1,fastq_2
-CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
-```
-
-Each row represents a fastq file (single-end) or a pair of fastq files (paired end).
-
--->
-
-First, prepare a file with your input data that looks like file `assets/chla_test_input_channels.yaml`:
+Below is an example [`assemblysheet.yaml`](assets/chla_test_input_channels.yaml) evaluating four assemblies of *C. trachomatis*:
 
 ```yaml
 samples:
@@ -73,9 +174,8 @@ samples:
       id: Ctrachomatis
       kmer_size: 21
       ploidy: 1
-      # Organism domain: either euk or prok
       organism_domain: prok
-      taxid: "315277" 
+      taxid: "315277"
       busco_lineages:
         - "chlamydiae_odb10"
     assembly:
@@ -83,32 +183,37 @@ samples:
         pri_asm: "./data_test/GCF_000012125.1_ASM1212v1_genomic.fasta"
       - id: ctracho_5inversions_default
         pri_asm: "./data_test/ctracho_5inversions_default.simseq.genome.fa"
-      - id: ctracho_10persnp_default
-        pri_asm: "./data_test/ctracho_10persnp_default.simseq.genome.fa"
-      - id: ctracho_5inversions_split
-        pri_asm: "./data_test/Ctrachomatis_ctracho_5inversions_default_cleaned_breaked.fasta"
     illumina:
       - read1: "./data_test/mason_R1_001.fastq.gz"
         read2: "./data_test/mason_R2_001.fastq.gz"
+    ont:
+      - reads: "./data_test/ont_reads_pbsim3.fq.gz"
 ```
 
-Each row in `assembly` section represents an assembly obtained from a different genome assembler tool. The section `illumina` indicates a pair of fastq files (paired end) used to validate the assembly.
-
-Now, you can test the pipeline using:
-
-<!-- TODO nf-core: update the following command to include all required parameters for a minimal example -->
+To get started, clone the repository, enter the folder, and test the pipeline using the bundled C. trachomatis test dataset:
 
 ```bash
+git clone https://github.com/rodtheo/nf-assemblyeval.git
+
+cd nf-assemblyeval
+
+export NXF_VER=25.04.3
+
 nextflow run main.nf \
-   -profile docker,test \
+   -profile docker \
+   --max_cpus <N> \
+   --input assets/chla_test_input_channels.yaml \
    --outdir <OUTDIR>
 ```
 
-> [!WARNING]
-> Please provide pipeline parameters via the CLI or Nextflow `-params-file` option. Custom config files including those provided by the `-c` Nextflow option can be used to provide any configuration _**except for parameters**_;
-> see [docs](https://nf-co.re/usage/configuration#custom-configuration-files).
+Once the pipeline completes, the main outputs are:
+- **General evaluation report**: `<OUTDIR>/multiqc/Report-for-General-Evaluation-of-Assemblies_multiqc_report.html`
+- **Per-assembly error inspection**: `<OUTDIR>/igvreports/`
 
-For more details and further functionality, please refer to the [usage documentation](https://nf-co.re/assemblyeval/usage) and the [parameter documentation](https://nf-co.re/assemblyeval/parameters).
+> [!WARNING]
+> Provide pipeline parameters via the CLI or `--params-file`. The `-c` Nextflow option handles configuration only and **cannot** set pipeline parameters. See [docs](https://nf-co.re/usage/configuration#custom-configuration-files).
+
+For more details, see the [usage documentation](https://nf-co.re/assemblyeval/usage) and [parameter documentation](https://nf-co.re/assemblyeval/parameters).
 
 ## Pipeline output
 
@@ -118,6 +223,10 @@ After the pipeline finishes, the main outputs are self-contained HTML located at
 
 For more details about the output files and reports, please refer to the
 [output documentation]().
+
+## Disclaimer
+
+This is not an official nf-core community pipeline (at least, not yet), although it strives to follow the community's recommended standards as closely as possible.
 
 ## Credits
 

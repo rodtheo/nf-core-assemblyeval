@@ -1,20 +1,33 @@
-# nf-core/assemblyeval: Output
+# nf-core/assemblyeval: Output<!-- omit in toc -->
 
-## Introduction
+## Introduction<!-- omit in toc -->
 
-This document describes the output produced by the pipeline. Most of the plots are taken from the MultiQC report, which summarises results at the end of the pipeline.
+This document describes the output produced by the pipeline. Most of the plots and tables are taken from the MultiQC report, which summarises results at the end of the pipeline. The interactive IGV-Reports files provide a per-assembly genome browser view of all alignment-based tracks.
 
-The directories listed below will be created in the results directory after the pipeline has finished. All paths are relative to the top-level results directory.
+The directories listed below will be created in the results directory after the pipeline has finished. All paths are relative to the top-level results directory (`--outdir`).
 
-<!-- TODO nf-core: Write this documentation describing your workflow's output -->
+## Pipeline overview<!-- omit in toc -->
 
-## Pipeline overview
+The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes data to produce the following outputs:
 
-The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes data using the following steps:
+<!-- no toc -->
 
-- [FastQC](#fastqc) - Raw read QC
-- [MultiQC](#multiqc) - Aggregate report describing results and QC from the whole pipeline
-- [Pipeline information](#pipeline-information) - Report metrics generated during the workflow execution
+- [FastQC](#fastqc)
+- [QUAST](#quast)
+- [COMPLEASM](#compleasm)
+- [GenomeScope2](#genomescope2)
+- [Meryl](#meryl)
+- [Merfin](#merfin)
+- [Short-read alignment (BWA-MEM2)](#short-read-alignment-bwa-mem2)
+- [Long-read alignment (Minimap2)](#long-read-alignment-minimap2)
+- [ALE](#ale)
+- [REAPR](#reapr)
+- [CRAQ](#craq)
+- [IGV-Reports](#igv-reports)
+- [MultiQC](#multiqc)
+- [Pipeline information](#pipeline-information)
+
+---
 
 ### FastQC
 
@@ -22,22 +35,256 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
 <summary>Output files</summary>
 
 - `fastqc/`
-  - `*_fastqc.html`: FastQC report containing quality metrics.
-  - `*_fastqc.zip`: Zip archive containing the FastQC report, tab-delimited data file and plot images.
+  - `*_1_fastqc.html` / `*_2_fastqc.html`: FastQC HTML report for the forward and reverse Illumina reads.
+  - `*_1_fastqc.zip` / `*_2_fastqc.zip`: FastQC statistics archive for the forward and reverse reads.
 
 </details>
 
-[FastQC](http://www.bioinformatics.babraham.ac.uk/projects/fastqc/) gives general quality metrics about your sequenced reads. It provides information about the quality score distribution across your reads, per base sequence content (%A/T/G/C), adapter contamination and overrepresented sequences. For further reading and documentation see the [FastQC help pages](http://www.bioinformatics.babraham.ac.uk/projects/fastqc/Help/).
+[FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) provides quality control metrics for the input Illumina short reads, including per-base quality scores, GC content, adapter content, and sequence duplication levels. Results are summarised in the MultiQC report.
 
-![MultiQC - FastQC sequence counts plot](images/mqc_fastqc_counts.png)
+> [!NOTE]
+> FastQC is run on the raw input reads before alignment. It does not filter or trim reads.
 
-![MultiQC - FastQC mean quality scores plot](images/mqc_fastqc_quality.png)
+<!-- TODO: Add a screenshot of a FastQC report section as shown in the MultiQC report -->
 
-![MultiQC - FastQC adapter content plot](images/mqc_fastqc_adapter.png)
+---
 
-:::note
-The FastQC plots displayed in the MultiQC report shows _untrimmed_ reads. They may contain adapter sequence and potentially regions with low quality.
-:::
+### QUAST
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `quast/`
+  - `<sample_id>_<assembly_id>/`: Full QUAST output directory for each assembly, containing detailed HTML and TSV reports.
+  - `<sample_id>_<assembly_id>.tsv`: Summary of contiguity statistics in TSV format, including number of contigs, total length, N50, N90, auN, and largest contig.
+
+</details>
+
+[QUAST](https://quast.sourceforge.net/) evaluates assembly contiguity. Key metrics reported include:
+
+- **Number of contigs** and total assembly length
+- **N50 / N90**: Length at which contigs cover 50% / 90% of the assembly
+- **auN** (area under the Nx curve): A single-value summary of contiguity robust to assembly size differences
+- **Largest contig**
+
+Results are incorporated into the MultiQC report for comparison across assemblies.
+
+<!-- TODO: Add screenshot of the QUAST contiguity table as shown in the MultiQC report -->
+
+---
+
+### COMPLEASM
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `compleasm/`
+  - `<sample_id>_<assembly_id>-<lineage>-compleasm/`: Full COMPLEASM output directory for each assembly and lineage combination, containing:
+    - `summary.txt`: Summary of BUSCO completeness results.
+    - `full_table.tsv`: Per-gene completeness results.
+    - `mb_download/`: Downloaded lineage database (if not pre-cached).
+
+</details>
+
+[COMPLEASM](https://github.com/huangnengCSU/compleasm) is a fast re-implementation of BUSCO used to assess gene-space completeness. It searches the assembly for conserved single-copy orthologs from the specified BUSCO lineage database (`odb12` required). Results are reported as percentages of **Complete (C)**, **Single-copy (S)**, **Duplicated (D)**, **Fragmented (F)**, and **Missing (M)** BUSCOs.
+
+> [!NOTE]
+> COMPLEASM is the default completeness tool. BUSCO can be used instead by setting `--busco true`.
+
+<!-- TODO: Add screenshot of the completeness bar chart as shown in the MultiQC report -->
+
+---
+
+### GenomeScope2
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `genomescope2/`
+  - `<sample_id>_linear_plot.png`: K-mer frequency histogram on a linear scale with the fitted model.
+  - `<sample_id>_log_plot.png`: K-mer frequency histogram on a log scale with the fitted model.
+  - `<sample_id>_transformed_linear_plot.png`: Transformed linear plot.
+  - `<sample_id>_transformed_log_plot.png`: Transformed log plot.
+  - `<sample_id>_fitted_hist.png`: Fitted histogram.
+  - `<sample_id>_summary.txt`: Text summary of genome model estimates (heterozygosity, genome size, repeat content, ploidy).
+  - `<sample_id>_model.txt`: Model parameters file.
+  - `<sample_id>_lookup_table.txt`: K-mer lookup table.
+
+</details>
+
+[GenomeScope2](https://github.com/tbenavi1/genomescope2.0) estimates genome properties (size, ploidy, heterozygosity, and repeat content) from the k-mer frequency histogram generated by Meryl. These estimates are used downstream by Merfin to compute quality values.
+
+<!-- TODO: Add example GenomeScope2 linear plot image (e.g. images/genomescope2_linear.png) -->
+
+---
+
+### Meryl
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `meryl/`
+  - `read.<sample_id>.merged.meryl/`: Merged Meryl k-mer database built from all input Illumina reads for the sample.
+  - `read.<assembly_id>.meryl/`: Per-assembly Meryl k-mer database (used internally by Merfin).
+  - `<sample_id>.hist`: K-mer frequency histogram (input to GenomeScope2).
+
+</details>
+
+[Meryl](https://github.com/marbl/meryl) counts k-mers in the Illumina reads and assemblies. The resulting k-mer databases are used by GenomeScope2 for genome profiling and by Merfin for assembly quality value (QV) estimation and completeness scoring.
+
+---
+
+### Merfin
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `merfin/`
+  - `<sample_id>_<assembly_id>.hist`: K-mer multiplicity histogram of the assembly evaluated against the read k-mer database.
+  - `<sample_id>_<assembly_id>.hist.stderr.log`: Merfin log file.
+  - `<sample_id>_<assembly_id>.completeness`: K-mer completeness statistics, including the fraction of read k-mers present in the assembly.
+
+</details>
+
+[Merfin](https://github.com/arangrhie/merfin) evaluates assembly quality using k-mer-based metrics. It computes:
+
+- **QV\*** (`merfin_qv_ast`): A phred-scaled quality value estimating the base-level error rate of the assembly, derived from the k-mer copy number distribution.
+- **K-mer completeness** (`merfin_completeness`): The fraction of read k-mers represented in the assembly, reflecting how much of the sequenced genome is captured.
+
+Both metrics feed into the assembly scoring system. Higher QV\* indicates fewer k-mer errors; higher completeness indicates better genome recovery.
+
+<!-- TODO: Add screenshot of Merfin QV and completeness columns in the MultiQC summary table -->
+
+---
+
+### Short-read alignment (BWA-MEM2)
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `bwamem2/`
+  - `<sample_id>_<assembly_id>.bam`: Coordinate-sorted BAM file of Illumina short reads aligned to each assembly.
+- `samtools/`
+  - `sorted_<sample_id>_<assembly_id>.bam`: Sorted and indexed BAM files (intermediate files used by ALE, REAPR, and IGV-Reports).
+  - `sorted_<sample_id>_<assembly_id>.bam.bai`: BAM index.
+
+</details>
+
+Illumina short reads are aligned to each assembly using [BWA-MEM2](https://github.com/bwa-mem/bwa-mem2), a fast and memory-efficient implementation of BWA-MEM. The resulting BAM files are sorted and indexed with [Samtools](https://www.htslib.org/) and used as input for ALE, REAPR, and IGV-Reports.
+
+---
+
+### Long-read alignment (Minimap2)
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `minimap2/`
+  - `<sample_id>_<assembly_id>_long.bam`: BAM file of long reads (ONT or PacBio) aligned to each assembly.
+  - `<sample_id>_<assembly_id>_long.bam.bai`: BAM index.
+
+</details>
+
+Long reads are aligned to each assembly using [Minimap2](https://github.com/lh3/minimap2) with the preset specified by `--long_read_technology` (`map-ont` for ONT, `map-pb` for PacBio CLR). The resulting alignments are used by CRAQ for long-read-based correctness assessment.
+
+---
+
+### ALE
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `ale/`
+  - `<sample_id>_<assembly_id>_ALEoutput.txt.gz`: Compressed ALE output file containing per-position scores and the global ALE score for the assembly.
+
+</details>
+
+[ALE](https://github.com/sc932/ALE) (Assembly Likelihood Estimator) assesses assembly correctness using probabilistic alignment of short reads. It models the expected distribution of insert sizes, read placement, and k-mer frequencies, then computes per-position and global log-likelihood scores. A higher (less negative) ALE score indicates a better-supported assembly. The global ALE score is incorporated into the weighted assembly scoring system.
+
+<!-- TODO: Add screenshot of ALE scores in the MultiQC summary table -->
+
+---
+
+### REAPR
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `reapr/`
+  - `<sample_id>_<assembly_id>-REAPR/`: Full REAPR output directory for each assembly, containing:
+    - `05.summary.report.txt`: Assembly-level summary with the REAPR FCD error count and score.
+    - `03.score.gff`: Per-base REAPR score in GFF format.
+    - `04.break.broken_assembly.fa`: Assembly broken at predicted error regions.
+    - Other intermediate files.
+- `reaper/`
+  - `<sample_id>_<assembly_id>_reaper_score_per_base.bedGraph`: Per-base REAPR score in BedGraph format (used by IGV-Reports).
+- `subset/`
+  - `<sample_id>_<assembly_id>_reaper_failure.bed`: BED file of genomic regions identified by REAPR as assembly errors (low-confidence regions).
+
+</details>
+
+[REAPR](https://www.sanger.ac.uk/tool/reapr/) (Reference-free Evaluation of Assembly using Paired Reads) uses the distribution of paired-end Illumina insert sizes to detect mis-assemblies. It computes:
+
+- **FCD (Fragment Coverage Distribution) error count**: Number of windows with abnormal insert size distributions, used as a correctness metric.
+- **Per-base REAPR score**: A continuous score across the assembly indicating local correctness.
+
+By default, REAPR runs on the whole assembly. When `--reapr_by_chr true` is set, it runs independently per contig/chromosome for higher sensitivity, at the cost of greater compute time.
+
+<!-- TODO: Add screenshot of REAPR scores and error regions as visualised in IGV-Reports -->
+
+---
+
+### CRAQ
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `craq/`
+  - `<sample_id>_<assembly_id>-craq/`: Full CRAQ output directory for each assembly, containing:
+    - `*.AQI.txt`: Assembly Quality Index (AQI) report, including R-AQI (regional) and S-AQI (structural) scores.
+    - `*.clipping.region`: BED-like file of clipping-enriched (potentially erroneous) regions.
+    - `*.low_mapQ.region`: Regions with low mapping quality long reads.
+    - Other intermediate files.
+
+</details>
+
+[CRAQ](https://github.com/JiaoLaboratory/CRAQ) (Clipping-based Reveal of Assembly Quality) evaluates assembly correctness using soft-clipped alignments from long reads. Soft-clipping occurs when a read cannot fully align to the assembly, often indicating local structural errors. CRAQ computes:
+
+- **R-AQI** (Regional Assembly Quality Index): Fraction of contigs free of regional errors (clipping hotspots).
+- **S-AQI** (Structural Assembly Quality Index): Fraction of contigs without large-scale structural mis-assemblies.
+
+Both scores range from 0 to 100; higher is better. They are incorporated into the weighted scoring system.
+
+<!-- TODO: Add screenshot of CRAQ R-AQI and S-AQI scores in the MultiQC summary table -->
+
+---
+
+### IGV-Reports
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `igvreports/`
+  - `<sample_id>_<assembly_id>_report_mqc.html`: Self-contained interactive HTML report for each assembly, embedding an IGV genome browser with all alignment-based tracks.
+
+</details>
+
+[IGV-Reports](https://github.com/igvteam/igv-reports) generates a self-contained interactive HTML genome browser for each assembly. The report embeds the following tracks, derived from short-read alignments processed by ALE, REAPR, and Bedtools:
+
+| Track | Description |
+|---|---|
+| `depth` | Per-base read depth |
+| `insert` | Insert size distribution per position |
+| `kmer` | K-mer multiplicity track (from Merfin) |
+| `base` | Per-base ALE score |
+| `place` | Read placement score (ALE) |
+| `bdg` | REAPR per-base score (BedGraph) |
+
+This report is one of the two main outputs of the pipeline and is directly linked from the MultiQC report.
+
+<!-- TODO: Add screenshot of the IGV-Reports HTML interactive genome browser view -->
+
+---
 
 ### MultiQC
 
@@ -45,15 +292,22 @@ The FastQC plots displayed in the MultiQC report shows _untrimmed_ reads. They m
 <summary>Output files</summary>
 
 - `multiqc/`
-  - `multiqc_report.html`: a standalone HTML file that can be viewed in your web browser.
-  - `multiqc_data/`: directory containing parsed statistics from the different tools used in the pipeline.
-  - `multiqc_plots/`: directory containing static images from the report in various formats.
+  - `Report-for-General-Evaluation-of-Assemblies_multiqc_report.html`: Main MultiQC HTML report aggregating all assembly evaluation results.
+  - `Report-for-General-Evaluation-of-Assemblies_multiqc_report_data/`: Directory containing the underlying data tables used to generate the report.
+  - `Report-for-General-Evaluation-of-Assemblies_multiqc_report_plots/`: Directory containing static plot images exported from the report.
 
 </details>
 
-[MultiQC](http://multiqc.info) is a visualization tool that generates a single HTML report summarising all samples in your project. Most of the pipeline QC results are visualised in the report and further statistics are available in the report data directory.
+[MultiQC](https://multiqc.info/) aggregates results from all evaluation tools into a single interactive HTML report. This is the **primary output** of the pipeline. The report contains:
 
-Results generated by MultiQC collate pipeline QC from supported tools e.g. FastQC. The pipeline has special steps which also allow the software versions to be reported in the MultiQC output for future traceability. For more information about how to use MultiQC reports, see <http://multiqc.info>.
+- A **summary table** comparing all assemblies side-by-side across all metrics (contiguity, completeness, k-mer QV, correctness scores, and the final weighted score).
+- **Per-tool sections** with detailed statistics and plots for QUAST, COMPLEASM, GenomeScope2, Merfin, ALE, REAPR, CRAQ, and FastQC.
+- **Links to IGV-Reports** for interactive per-assembly genome browsing.
+
+<!-- TODO: Add screenshot of the MultiQC report summary table -->
+<!-- TODO: Add screenshot of one of the per-tool MultiQC sections (e.g. QUAST contiguity or COMPLEASM completeness bar chart) -->
+
+---
 
 ### Pipeline information
 
@@ -61,11 +315,13 @@ Results generated by MultiQC collate pipeline QC from supported tools e.g. FastQ
 <summary>Output files</summary>
 
 - `pipeline_info/`
-  - Reports generated by Nextflow: `execution_report.html`, `execution_timeline.html`, `execution_trace.txt` and `pipeline_dag.dot`/`pipeline_dag.svg`.
-  - Reports generated by the pipeline: `pipeline_report.html`, `pipeline_report.txt` and `software_versions.yml`. The `pipeline_report*` files will only be present if the `--email` / `--email_on_fail` parameter's are used when running the pipeline.
-  - Reformatted samplesheet files used as input to the pipeline: `samplesheet.valid.csv`.
-  - Parameters used by the pipeline run: `params.json`.
+  - `execution_report_<timestamp>.html`: Nextflow execution report with task-level statistics (CPU, memory, wall time per process).
+  - `execution_timeline_<timestamp>.html`: Timeline view of all pipeline tasks.
+  - `execution_trace_<timestamp>.txt`: Tab-separated trace file with resource usage per task.
+  - `pipeline_dag_<timestamp>.html`: Directed acyclic graph (DAG) of the pipeline workflow.
+  - `nf_core_pipeline_software_mqc_versions.yml`: YAML file listing all software versions used in the run.
+  - `params_<timestamp>.json`: JSON file recording all parameter values used for the run (useful for reproducibility).
 
 </details>
 
-[Nextflow](https://www.nextflow.io/docs/latest/tracing.html) provides excellent functionality for generating various reports relevant to the running and execution of the pipeline. This will allow you to troubleshoot errors with the running of the pipeline, and also provide you with other information such as launch commands, run times and resource usage.
+[Nextflow](https://www.nextflow.io/docs/latest/tracing.html) provides execution reports, timelines, and resource traces for every pipeline run. These files are useful for troubleshooting, auditing resource usage, and ensuring reproducibility. The `params_*.json` file records the exact parameter set used and should be archived alongside results for future reference.
