@@ -217,7 +217,7 @@ For more details, see the [usage documentation](https://github.com/rodtheo/nf-co
 
 ## Pipeline output
 
-To see the results of an example test run with a full size dataset refer to the [results](https://rodtheo.github.io/simposio-biomol-2024/simulations/Report-for-General-Evaluation-of-Assemblies_multiqc_report.html) and the [IGV report](https://rodtheo.github.io/simposio-biomol-2024/simulations/Ctrachomatis_ctracho_5inversions_default_report_mqc.html).
+To see the results of an example test run with a full size dataset refer to the [results](https://rodtheo.github.io/simposio-biomol-2024/results_assemblyeval/Report-for-General-Evaluation-of-Assemblies_multiqc_report.html) and the [IGV report](https://rodtheo.github.io/simposio-biomol-2024/results_assemblyeval/Ctrachomatis_ctracho_10persnp_default_report_mqc.html).
 
 After the pipeline finishes, the main outputs are self-contained HTML located at `<OUTDIR>/multiqc/` and `<OUTDIR>/igvreport/`.
 
