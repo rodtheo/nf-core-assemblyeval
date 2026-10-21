@@ -19,6 +19,8 @@
 
 ## Introduction
 
+![pipeline](assets/assemblyeval-metro.png)
+
 **Assemblyeval** accepts genome assemblies (FASTA), paired-end Illumina reads, and long reads (ONT or PacBio) via a YAML samplesheet, optionally cleaning them of contamination before evaluation. The pipeline systematically assesses contiguity (QUAST), completeness (COMPLEASM/BUSCO, Merfin), and correctness (ALE, REAPR, CRAQ) — combining read-alignment-based and k-mer-based evidence into a single normalized weighted score. Final outputs include a comparative MultiQC report ranking assemblies across all metrics and an IGV-based interactive report for manual inspection of putative structural errors.
 
 
